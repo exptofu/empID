@@ -530,7 +530,7 @@ canvas.dragging {
             <strong>
                 Feather Tips:
             </strong>
-            Click P3–P10. Blue dotted lines project
+            Click P8–P3 in sequence. Blue dotted lines project
             each tip onto the primary axis.
 
         </div>
@@ -1830,11 +1830,11 @@ function setMode(
     if (mode === "points") {
 
         if (
-            featherTips.length >= 8
+            featherTips.length >= 6
         ) {
 
             status.textContent =
-                "P3–P10 are already plotted.";
+                "P8–P3 are already plotted.";
 
         } else {
 
@@ -1947,12 +1947,12 @@ replotBtn.onclick =
 function nextAvailableFeatherNumber() {
 
     /*
-        Since featherTips are always renumbered
-        sequentially, the next number is simply
-        3 + number of existing tips.
+        US convention:
+        Primary tips are selected from P8 inward/downward:
+        P8, P7, P6, P5, P4, P3.
     */
 
-    return 3 + featherTips.length;
+    return 8 - featherTips.length;
 }
 
 
@@ -1962,7 +1962,7 @@ function renumberFeathers() {
         (feather, index) => {
 
             feather.label =
-                `P${index + 3}`;
+                `P${8 - index}`;
         }
     );
 }
@@ -2259,11 +2259,11 @@ canvas.addEventListener(
         ) {
 
             if (
-                featherTips.length >= 8
+                featherTips.length >= 6
             ) {
 
                 status.textContent =
-                    "Maximum reached: P3–P10 only.";
+                    "Maximum reached: P8–P3 only.";
 
                 return;
             }
@@ -3306,13 +3306,13 @@ window.deleteFeather =
 
         /*
             Collapse the labels so they always
-            remain sequential P3–P10.
+            remain sequential in US order, P8–P3.
 
             Example:
 
-            P3 P4 P5 P6 P7
-                 ↓ delete P5
-            P3 P4 P5 P6
+            P8 P7 P6 P5 P4
+                 ↓ delete P6
+            P8 P7 P6 P5
 
             The physical points remain in place.
         */
