@@ -3200,6 +3200,51 @@ function updateMeasurements() {
             }
 
 
+            // ----------------------------------------------------
+            // P7-P6 / P6-P5 ratio
+            // ----------------------------------------------------
+
+            const p7 = projectedFeathers.find(
+                item => item.feather.label === "P7"
+            );
+
+            const p6 = projectedFeathers.find(
+                item => item.feather.label === "P6"
+            );
+
+            const p5 = projectedFeathers.find(
+                item => item.feather.label === "P5"
+            );
+
+            if (p7 && p6 && p5) {
+
+                const gapP7P6 =
+                    Math.abs(p7.t - p6.t) * axisLength();
+
+                const gapP6P5 =
+                    Math.abs(p6.t - p5.t) * axisLength();
+
+                const ratio =
+                    gapP6P5 > 0
+                        ? gapP7P6 / gapP6P5
+                        : null;
+
+                if (ratio !== null) {
+                    html += `
+
+                        <div class="measurement">
+
+                            P7–P6 / P6–P5 ratio:
+                            <strong>
+                                ${ratio.toFixed(4)}
+                            </strong>
+
+                        </div>
+
+                    `;
+                }
+            }
+
             html += `
                 </div>
             `;
