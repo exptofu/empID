@@ -212,6 +212,7 @@ canvas {
         grab;
 
     touch-action: none;
+    -ms-touch-action: none;
     -webkit-user-select: none;
     user-select: none;
 }
@@ -410,20 +411,38 @@ canvas.dragging {
 
 @media (max-width: 700px) {
     #toolbar {
-        min-height: 92px;
+        height: auto;
+        min-height: 0;
+        flex: 0 0 auto;
+        flex-wrap: wrap;
+        align-content: center;
+        justify-content: stretch;
         padding: 6px;
         gap: 5px;
-        align-content: flex-start;
-        overflow-x: hidden;
-        overflow-y: auto;
+        overflow: visible;
     }
 
     button,
     .file-button {
+        min-width: 0;
         min-height: 40px;
-        padding: 8px 10px;
-        font-size: 12px;
-        flex: 0 0 auto;
+        padding: 7px 6px;
+        font-size: 11px;
+        line-height: 1.15;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        flex: 1 1 calc(25% - 5px);
+        text-align: center;
+    }
+
+    #zoomLabel {
+        flex: 1 1 calc(25% - 5px);
+        min-width: 0;
+        align-self: stretch;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
     }
 
     .separator {
@@ -776,6 +795,14 @@ let dragging =
 
 let dragObject =
     null;
+
+// Active touch/pointer state used for two-finger canvas gestures.
+const activePointers = new Map();
+let isPinching = false;
+let pinchStartDistance = 0;
+let pinchStartZoom = 1;
+let pinchStartMidpoint = null;
+let pinchImagePoint = null;
 
 let panStart =
     null;
@@ -2215,7 +2242,85 @@ function findDraggableObject(
 
 
 // ============================================================
-// Mouse Down
+// Touch / Pointer gesture helpers
+// ============================================================
+
+function pointerPosition(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+    };
+}
+
+function beginPinch() {
+    const pts = Array.from(activePointers.values());
+    if (pts.length < 2) return;
+
+    const a = pts[0];
+    const b = pts[1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance < 2) return;
+
+    pinchStartDistance = distance;
+    pinchStartZoom = zoom;
+    pinchStartMidpoint = {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2
+    };
+    pinchImagePoint = screenToImage(
+        pinchStartMidpoint.x,
+        pinchStartMidpoint.y
+    );
+    isPinching = true;
+    dragging = false;
+    dragObject = null;
+    canvas.classList.remove("dragging");
+}
+
+function updatePinch() {
+    if (!isPinching || activePointers.size < 2) return;
+
+    const pts = Array.from(activePointers.values());
+    const a = pts[0];
+    const b = pts[1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance < 2 || pinchStartDistance < 2) return;
+
+    const midpoint = {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2
+    };
+
+    const newZoom = clamp(
+        pinchStartZoom * (distance / pinchStartDistance),
+        0.1,
+        8
+    );
+
+    zoom = newZoom;
+
+    // Keep the image point under the fingers anchored while zooming,
+    // and move the canvas with the midpoint for natural two-finger pan.
+    const projected = imageToScreen(
+        pinchImagePoint.x,
+        pinchImagePoint.y
+    );
+    offsetX += midpoint.x - projected.x;
+    offsetY += midpoint.y - projected.y;
+
+    pinchStartMidpoint = midpoint;
+    updateZoomLabel();
+    draw();
+}
+
+// ============================================================
+// Pointer Down
 // ============================================================
 
 canvas.addEventListener(
@@ -2224,6 +2329,15 @@ canvas.addEventListener(
 
         if (!imageLoaded)
             return;
+
+        const pos = pointerPosition(event);
+        activePointers.set(event.pointerId, pos);
+
+        // A second finger switches immediately to canvas pinch/pan.
+        if (event.pointerType === "touch" && activePointers.size >= 2) {
+            beginPinch();
+            return;
+        }
 
         canvas.setPointerCapture(event.pointerId);
 
@@ -2503,6 +2617,15 @@ canvas.addEventListener(
     "pointermove",
     event => {
 
+        if (activePointers.has(event.pointerId)) {
+            activePointers.set(event.pointerId, pointerPosition(event));
+        }
+
+        if (isPinching) {
+            updatePinch();
+            return;
+        }
+
         if (!dragging)
             return;
 
@@ -2641,6 +2764,25 @@ canvas.addEventListener(
 
 
 function finishMouseAction(event) {
+
+    if (event) {
+        activePointers.delete(event.pointerId);
+    }
+
+    // End the gesture when fewer than two touches remain. Do not let
+    // pointerup from a pinch accidentally create an annotation.
+    if (isPinching) {
+        if (activePointers.size < 2) {
+            isPinching = false;
+            pinchStartDistance = 0;
+            pinchImagePoint = null;
+        }
+        if (event && canvas.hasPointerCapture(event.pointerId)) {
+            canvas.releasePointerCapture(event.pointerId);
+        }
+        draw();
+        return;
+    }
 
     if (!dragging)
         return;
