@@ -3020,7 +3020,8 @@ document.getElementById(
 
         fitImage();
 
-        setMode("axis");
+        setMode("pan");
+        setInstruction("imageLoaded");
 
     };
 
@@ -3115,5 +3116,4 @@ instructionsToggle.addEventListener(
 );
 
 
-setMode("pan");
 updateWorkflowHighlight();

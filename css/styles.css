@@ -54,6 +54,15 @@ body {
 button,
 .file-button {
 
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
     border:
         1px solid #555;
 
