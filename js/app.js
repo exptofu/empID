@@ -1,0 +1,3119 @@
+"use strict";
+
+
+// ============================================================
+// DOM
+// ============================================================
+
+const canvas =
+    document.getElementById("canvas");
+
+const ctx =
+    canvas.getContext("2d");
+
+const fileInput =
+    document.getElementById("fileInput");
+
+const openImageBtn =
+    document.getElementById("openImageBtn");
+
+const panBtn =
+    document.getElementById("panBtn");
+
+const axisBtn =
+    document.getElementById("axisBtn");
+
+const pointBtn =
+    document.getElementById("pointBtn");
+
+const measureBtn =
+    document.getElementById("measureBtn");
+
+const zoomLabel =
+    document.getElementById("zoomLabel");
+
+const measurementsDiv =
+    document.getElementById("measurements");
+
+const status =
+    document.getElementById("status");
+
+const instructions =
+    document.getElementById("instructions");
+
+const instructionBody =
+    document.getElementById("instructionBody");
+
+const instructionsToggle =
+    document.getElementById("instructionsToggle");
+
+const instructionMessages = {
+    launch:
+        "Load an image to begin. All processing is local and never leaves your device",
+    imageLoaded:
+        "Select the Primary Projection button to align measurements",
+    axis:
+        "Click and drag to create an axis to measure by. These points can be dragged after",
+    featherTipsReady:
+        "Select Feather Tips to place markers for each visible primary feather from outside (P8) to in (P3)",
+    featherTipsActive:
+        "Place markers for each visible primary feather from outside (P8) to in (P3)",
+    complete:
+        "TBD: All measurements complete. You can still adjust the axis and feather tips if needed"
+};
+
+
+// ============================================================
+// Image
+// ============================================================
+
+let image =
+    new Image();
+
+let imageLoaded =
+    false;
+
+let imageWidth =
+    0;
+
+let imageHeight =
+    0;
+// ============================================================
+// View
+// ============================================================
+
+let zoom =
+    1;
+
+let offsetX =
+    0;
+
+let offsetY =
+    0;
+
+
+// ============================================================
+// Mode
+// ============================================================
+
+let mode =
+    "pan";
+
+
+// ============================================================
+// Primary axis
+// ============================================================
+
+let axis =
+    null;
+
+
+/*
+    IMPORTANT:
+
+    Secondary Tip is now an independent image point.
+
+    It is NOT constrained to the axis.
+
+    Its projected location is calculated when needed.
+*/
+
+let secondaryTip =
+    null;
+
+
+// ============================================================
+// Feather tips
+// ============================================================
+
+let featherTips =
+    [];
+
+
+// ============================================================
+// Generic measurements
+// ============================================================
+
+let measurements =
+    [];
+
+let currentMeasurement =
+    null;
+
+
+// ============================================================
+// Drag state
+// ============================================================
+
+let dragging =
+    false;
+
+let dragObject =
+    null;
+
+// Active touch/pointer state used for two-finger canvas gestures.
+const activePointers = new Map();
+let isPinching = false;
+let pinchStartDistance = 0;
+let pinchStartZoom = 1;
+let pinchStartMidpoint = null;
+let pinchImagePoint = null;
+
+let panStart =
+    null;
+
+let panOrigin =
+    null;
+
+
+// ============================================================
+// Resize
+// ============================================================
+
+function resizeCanvas() {
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+    const dpr =
+        window.devicePixelRatio || 1;
+
+    canvas.width =
+        Math.round(
+            rect.width * dpr
+        );
+
+    canvas.height =
+        Math.round(
+            rect.height * dpr
+        );
+
+    ctx.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        0,
+        0
+    );
+
+    draw();
+}
+
+window.addEventListener(
+    "resize",
+    resizeCanvas
+);
+
+resizeCanvas();
+
+
+// ============================================================
+// Image loading
+// ============================================================
+
+fileInput.addEventListener(
+    "change",
+    event => {
+
+        const file =
+            event.target.files[0];
+
+        if (!file)
+            return;
+
+        resetAnnotations();
+
+        const url =
+            URL.createObjectURL(file);
+
+        image.onload =
+            () => {
+
+                imageLoaded =
+                    true;
+
+                imageWidth =
+                    image.naturalWidth;
+
+                imageHeight =
+                    image.naturalHeight;
+
+                fitImage();
+
+                setMode("pan");
+                setInstruction("imageLoaded");
+
+                URL.revokeObjectURL(url);
+
+                status.textContent =
+                    `${imageWidth} × ${imageHeight}px`;
+            };
+
+        image.src =
+            url;
+    }
+);
+
+
+// ============================================================
+// Coordinate conversion
+// ============================================================
+
+function screenToImage(
+    x,
+    y
+) {
+
+    return {
+
+        x:
+            (x - offsetX) /
+            zoom,
+
+        y:
+            (y - offsetY) /
+            zoom
+    };
+}
+
+
+function imageToScreen(
+    x,
+    y
+) {
+
+    return {
+
+        x:
+            x * zoom +
+            offsetX,
+
+        y:
+            y * zoom +
+            offsetY
+    };
+}
+
+
+// ============================================================
+// Utility
+// ============================================================
+
+function clamp(
+    value,
+    min,
+    max
+) {
+
+    return Math.max(
+        min,
+        Math.min(
+            max,
+            value
+        )
+    );
+}
+
+
+function axisLength() {
+
+    if (!axis)
+        return 0;
+
+    return Math.hypot(
+        axis.x2 - axis.x1,
+        axis.y2 - axis.y1
+    );
+}
+
+
+// ============================================================
+// Project arbitrary point onto axis
+// ============================================================
+
+function projectOntoAxis(
+    point
+) {
+
+    if (!axis)
+        return null;
+
+    const vx =
+        axis.x2 -
+        axis.x1;
+
+    const vy =
+        axis.y2 -
+        axis.y1;
+
+    const len2 =
+        vx * vx +
+        vy * vy;
+
+    if (len2 === 0)
+        return null;
+
+    const rawT =
+        (
+            (point.x - axis.x1) * vx +
+            (point.y - axis.y1) * vy
+        ) / len2;
+
+
+    /*
+        Keep projection on the actual
+        primary axis.
+    */
+
+    const t =
+        clamp(
+            rawT,
+            0,
+            1
+        );
+
+
+    return {
+
+        t,
+
+        point: {
+
+            x:
+                axis.x1 +
+                vx * t,
+
+            y:
+                axis.y1 +
+                vy * t
+        }
+    };
+}
+
+
+// ============================================================
+// Point on axis
+// ============================================================
+
+function pointOnAxis(
+    t
+) {
+
+    return {
+
+        x:
+            axis.x1 +
+            (
+                axis.x2 -
+                axis.x1
+            ) * t,
+
+        y:
+            axis.y1 +
+            (
+                axis.y2 -
+                axis.y1
+            ) * t
+    };
+}
+
+
+// ============================================================
+// Perpendicular guide
+// ============================================================
+
+function perpendicularGuide(
+    point
+) {
+
+    if (!axis)
+        return null;
+
+    const dx =
+        axis.x2 -
+        axis.x1;
+
+    const dy =
+        axis.y2 -
+        axis.y1;
+
+    const len =
+        Math.hypot(
+            dx,
+            dy
+        );
+
+    if (len === 0)
+        return null;
+
+
+    const nx =
+        -dy / len;
+
+    const ny =
+        dx / len;
+
+
+    /*
+        Total perpendicular guide length
+        = 1/2 of primary axis length.
+
+        Therefore each side:
+        1/4 of axis length.
+    */
+
+    const halfGuide =
+        len / 4;
+
+
+    return {
+
+        x1:
+            point.x +
+            nx * halfGuide,
+
+        y1:
+            point.y +
+            ny * halfGuide,
+
+        x2:
+            point.x -
+            nx * halfGuide,
+
+        y2:
+            point.y -
+            ny * halfGuide
+    };
+}
+
+
+// ============================================================
+// Draw everything
+// ============================================================
+
+function draw() {
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+    ctx.clearRect(
+        0,
+        0,
+        rect.width,
+        rect.height
+    );
+
+
+    if (!imageLoaded)
+        return;
+
+
+    drawImage();
+
+    /*
+        Guides are intentionally drawn first.
+    */
+
+    drawAlignmentGuides();
+
+    drawAxis();
+
+    drawSecondaryTip();
+
+    drawFeatherTips();
+
+    drawMeasurements();
+
+    drawCurrentMeasurement();
+}
+
+
+// ============================================================
+// Image
+// ============================================================
+
+function drawImage() {
+
+    ctx.save();
+
+    ctx.translate(
+        offsetX,
+        offsetY
+    );
+
+    ctx.scale(
+        zoom,
+        zoom
+    );
+
+    ctx.drawImage(
+        image,
+        0,
+        0
+    );
+
+    ctx.restore();
+}
+
+
+// ============================================================
+// Alignment guides
+// ============================================================
+
+function drawAlignmentGuides() {
+
+    if (!axis)
+        return;
+
+
+    /*
+        Axis Start
+    */
+
+    drawPerpendicularGuide(
+        {
+            x: axis.x1,
+            y: axis.y1
+        },
+        "#ff7777"
+    );
+
+
+    /*
+        Axis End
+    */
+
+    drawPerpendicularGuide(
+        {
+            x: axis.x2,
+            y: axis.y2
+        },
+        "#ff7777"
+    );
+
+
+    /*
+        Secondary Tip.
+    */
+
+    if (secondaryTip) {
+
+        drawPerpendicularGuide(
+            secondaryTip,
+            "#ffffff"
+        );
+    }
+}
+
+
+function drawPerpendicularGuide(
+    point,
+    color
+) {
+
+    const guide =
+        perpendicularGuide(
+            point
+        );
+
+    if (!guide)
+        return;
+
+
+    const a =
+        imageToScreen(
+            guide.x1,
+            guide.y1
+        );
+
+    const b =
+        imageToScreen(
+            guide.x2,
+            guide.y2
+        );
+
+
+    ctx.save();
+
+    ctx.strokeStyle =
+        color;
+
+    ctx.globalAlpha =
+        .65;
+
+    ctx.lineWidth =
+        1.5;
+
+    ctx.setLineDash([
+        5,
+        5
+    ]);
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        a.x,
+        a.y
+    );
+
+    ctx.lineTo(
+        b.x,
+        b.y
+    );
+
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+
+// ============================================================
+// Primary axis
+// ============================================================
+
+function drawAxis() {
+
+    if (!axis)
+        return;
+
+
+    const a =
+        imageToScreen(
+            axis.x1,
+            axis.y1
+        );
+
+    const b =
+        imageToScreen(
+            axis.x2,
+            axis.y2
+        );
+
+
+    ctx.save();
+
+    ctx.strokeStyle =
+        "#ff4d4d";
+
+    ctx.lineWidth =
+        2.5;
+
+    ctx.setLineDash([]);
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        a.x,
+        a.y
+    );
+
+    ctx.lineTo(
+        b.x,
+        b.y
+    );
+
+    ctx.stroke();
+
+
+    drawArrow(
+        a,
+        b,
+        "#ff4d4d"
+    );
+
+
+    drawHandle(
+        a.x,
+        a.y,
+        "#ff4d4d",
+        7
+    );
+
+
+    drawHandle(
+        b.x,
+        b.y,
+        "#ff4d4d",
+        7
+    );
+
+
+    ctx.restore();
+}
+
+
+// ============================================================
+// Secondary Tip
+// ============================================================
+
+function drawSecondaryTip() {
+
+    if (!secondaryTip)
+        return;
+
+
+    const screen =
+        imageToScreen(
+            secondaryTip.x,
+            secondaryTip.y
+        );
+
+
+    /*
+        Actual Secondary Tip point.
+    */
+
+    ctx.save();
+
+    ctx.fillStyle =
+        "rgba(255,255,255,.2)";
+
+    ctx.strokeStyle =
+        "#ffffff";
+
+    ctx.lineWidth =
+        2;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        screen.x,
+        screen.y,
+        11,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.stroke();
+
+
+    /*
+        Crosshair.
+    */
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        screen.x - 14,
+        screen.y
+    );
+
+    ctx.lineTo(
+        screen.x + 14,
+        screen.y
+    );
+
+    ctx.moveTo(
+        screen.x,
+        screen.y - 14
+    );
+
+    ctx.lineTo(
+        screen.x,
+        screen.y + 14
+    );
+
+    ctx.stroke();
+
+
+    drawLabel(
+        screen.x + 16,
+        screen.y - 10,
+        "Secondary Tip",
+        "#ffffff"
+    );
+
+
+    /*
+        Projected point on the primary axis.
+    */
+
+    if (axis) {
+
+        const projection =
+            projectOntoAxis(
+                secondaryTip
+            );
+
+
+        if (projection) {
+
+            const projected =
+                imageToScreen(
+                    projection.point.x,
+                    projection.point.y
+                );
+
+
+            drawHandle(
+                projected.x,
+                projected.y,
+                "#ffffff",
+                4
+            );
+        }
+    }
+
+
+    ctx.restore();
+}
+
+
+// ============================================================
+// Feather tips
+// ============================================================
+
+function drawFeatherTips() {
+
+    featherTips.forEach(
+        feather => {
+
+            const actual =
+                imageToScreen(
+                    feather.x,
+                    feather.y
+                );
+
+
+            /*
+                Project feather tip to axis.
+            */
+
+            if (axis) {
+
+                const projection =
+                    projectOntoAxis(
+                        feather
+                    );
+
+
+                if (projection) {
+
+                    const projected =
+                        imageToScreen(
+                            projection.point.x,
+                            projection.point.y
+                        );
+
+
+                    ctx.save();
+
+                    ctx.strokeStyle =
+                        "#50beff";
+
+                    ctx.globalAlpha =
+                        .9;
+
+                    ctx.lineWidth =
+                        1.5;
+
+                    ctx.setLineDash([
+                        4,
+                        5
+                    ]);
+
+                    ctx.beginPath();
+
+                    ctx.moveTo(
+                        actual.x,
+                        actual.y
+                    );
+
+                    ctx.lineTo(
+                        projected.x,
+                        projected.y
+                    );
+
+                    ctx.stroke();
+
+                    ctx.restore();
+
+
+                    drawHandle(
+                        projected.x,
+                        projected.y,
+                        "#50beff",
+                        4
+                    );
+                }
+            }
+
+
+            /*
+                Actual feather tip.
+            */
+
+            drawHandle(
+                actual.x,
+                actual.y,
+                "#50beff",
+                7
+            );
+
+
+            drawLabel(
+                actual.x + 10,
+                actual.y - 8,
+                feather.label,
+                "#50beff"
+            );
+        }
+    );
+}
+
+
+// ============================================================
+// Generic measurements
+// ============================================================
+
+function drawMeasurements() {
+
+    measurements.forEach(
+        measurement => {
+
+            const a =
+                imageToScreen(
+                    measurement.x1,
+                    measurement.y1
+                );
+
+            const b =
+                imageToScreen(
+                    measurement.x2,
+                    measurement.y2
+                );
+
+
+            ctx.save();
+
+            ctx.strokeStyle =
+                "#ffe066";
+
+            ctx.lineWidth =
+                2;
+
+            ctx.setLineDash([]);
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                a.x,
+                a.y
+            );
+
+            ctx.lineTo(
+                b.x,
+                b.y
+            );
+
+            ctx.stroke();
+
+
+            drawHandle(
+                a.x,
+                a.y,
+                "#ffe066"
+            );
+
+            drawHandle(
+                b.x,
+                b.y,
+                "#ffe066"
+            );
+
+
+            const length =
+                Math.hypot(
+                    measurement.x2 -
+                    measurement.x1,
+
+                    measurement.y2 -
+                    measurement.y1
+                );
+
+
+            drawLabel(
+                (a.x + b.x) / 2,
+                (a.y + b.y) / 2 - 8,
+                `${length.toFixed(1)} px`,
+                "#ffe066"
+            );
+
+
+            ctx.restore();
+        }
+    );
+}
+
+
+function drawCurrentMeasurement() {
+
+    if (!currentMeasurement)
+        return;
+
+
+    const a =
+        imageToScreen(
+            currentMeasurement.x1,
+            currentMeasurement.y1
+        );
+
+    const b =
+        imageToScreen(
+            currentMeasurement.x2,
+            currentMeasurement.y2
+        );
+
+
+    ctx.save();
+
+    ctx.strokeStyle =
+        "#ffe066";
+
+    ctx.lineWidth =
+        2;
+
+    ctx.setLineDash([
+        5,
+        4
+    ]);
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        a.x,
+        a.y
+    );
+
+    ctx.lineTo(
+        b.x,
+        b.y
+    );
+
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+
+// ============================================================
+// Drawing helpers
+// ============================================================
+
+function drawHandle(
+    x,
+    y,
+    color,
+    radius = 5
+) {
+
+    ctx.save();
+
+    ctx.fillStyle =
+        color;
+
+    ctx.strokeStyle =
+        "#fff";
+
+    ctx.lineWidth =
+        1.5;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        x,
+        y,
+        radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+
+function drawArrow(
+    a,
+    b,
+    color
+) {
+
+    const angle =
+        Math.atan2(
+            b.y - a.y,
+            b.x - a.x
+        );
+
+    const size =
+        10;
+
+
+    ctx.save();
+
+    ctx.fillStyle =
+        color;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        b.x,
+        b.y
+    );
+
+    ctx.lineTo(
+        b.x -
+        Math.cos(
+            angle - Math.PI / 6
+        ) * size,
+
+        b.y -
+        Math.sin(
+            angle - Math.PI / 6
+        ) * size
+    );
+
+    ctx.lineTo(
+        b.x -
+        Math.cos(
+            angle + Math.PI / 6
+        ) * size,
+
+        b.y -
+        Math.sin(
+            angle + Math.PI / 6
+        ) * size
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+    ctx.restore();
+}
+
+
+function drawLabel(
+    x,
+    y,
+    text,
+    color
+) {
+
+    ctx.save();
+
+    ctx.font =
+        "12px Arial";
+
+
+    const width =
+        ctx.measureText(
+            text
+        ).width + 8;
+
+
+    ctx.fillStyle =
+        "rgba(0,0,0,.78)";
+
+    ctx.fillRect(
+        x - 3,
+        y - 12,
+        width,
+        17
+    );
+
+
+    ctx.fillStyle =
+        color;
+
+    ctx.fillText(
+        text,
+        x + 1,
+        y
+    );
+
+
+    ctx.restore();
+}
+
+
+// ============================================================
+// Mode switching
+// ============================================================
+
+function setMode(
+    newMode
+) {
+
+    mode =
+        newMode;
+
+
+    [
+        panBtn,
+        axisBtn,
+        pointBtn,
+        measureBtn
+    ].forEach(
+        button => {
+
+            button.classList.remove("current");
+        }
+    );
+
+
+    if (mode === "pan")
+        panBtn.classList.add("current");
+
+
+    if (mode === "axis")
+        axisBtn.classList.add("current");
+
+
+    if (mode === "points")
+        pointBtn.classList.add("current");
+
+
+    if (mode === "measure")
+        measureBtn.classList.add("current");
+
+    updateWorkflowHighlight();
+
+
+    if (mode === "points") {
+
+        setInstruction("featherTipsActive");
+
+        if (
+            featherTips.length >= 6
+        ) {
+
+            status.textContent =
+                "P8–P3 are already plotted.";
+
+        } else {
+
+            status.textContent =
+                `Feather Tips: click to place P${nextAvailableFeatherNumber()}.`;
+        }
+    }
+
+
+    if (mode === "axis") {
+
+        setInstruction("axis");
+
+        if (axis) {
+
+                status.textContent =
+                    "Drag axis handles or Secondary Tip. Use Reset to start over.";
+
+        } else {
+
+            status.textContent =
+                "Click and drag to draw the Primary Projection axis.";
+        }
+    }
+
+
+    if (mode === "pan") {
+
+        if (!imageLoaded)
+            setInstruction("launch");
+        else if (axis && featherTips.length >= 6)
+            setInstruction("complete");
+        else if (axis)
+            setInstruction("featherTipsReady");
+
+        status.textContent =
+            "Pan mode";
+    }
+
+
+    if (mode === "measure") {
+
+        status.textContent =
+            "Click and drag to create a measurement.";
+    }
+}
+
+
+function setInstruction(
+    message
+) {
+    instructionBody.textContent =
+        instructionMessages[message];
+}
+
+
+// ============================================================
+// Buttons
+// ============================================================
+
+panBtn.onclick =
+    () => {
+
+        setMode(
+            "pan"
+        );
+    };
+
+
+axisBtn.onclick =
+    () => {
+
+        setMode(
+            "axis"
+        );
+    };
+
+
+pointBtn.onclick =
+    () => {
+
+        setMode(
+            "points"
+        );
+    };
+
+
+measureBtn.onclick =
+    () => {
+
+        setMode(
+            "measure"
+        );
+    };
+
+
+// ============================================================
+// Feather numbering
+// ============================================================
+
+function nextAvailableFeatherNumber() {
+
+    /*
+        US convention:
+        Primary tips are selected from P8 inward/downward:
+        P8, P7, P6, P5, P4, P3.
+    */
+
+    return 8 - featherTips.length;
+}
+
+
+function renumberFeathers() {
+
+    featherTips.forEach(
+        (feather, index) => {
+
+            feather.label =
+                `P${8 - index}`;
+        }
+    );
+}
+
+
+// ============================================================
+// Hit testing
+// ============================================================
+
+function findFeatherAt(
+    sx,
+    sy
+) {
+
+    const radius =
+        16;
+
+
+    for (
+        let i =
+            featherTips.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const screen =
+            imageToScreen(
+                featherTips[i].x,
+                featherTips[i].y
+            );
+
+
+        if (
+            Math.hypot(
+                screen.x - sx,
+                screen.y - sy
+            ) <= radius
+        ) {
+
+            return i;
+        }
+    }
+
+
+    return null;
+}
+
+
+function findDraggableObject(
+    sx,
+    sy
+) {
+
+    /*
+        Feather tips get highest priority.
+    */
+
+    const featherIndex =
+        findFeatherAt(
+            sx,
+            sy
+        );
+
+
+    if (
+        featherIndex !== null
+    ) {
+
+        return {
+
+            type:
+                "feather",
+
+            index:
+                featherIndex
+        };
+    }
+
+
+    /*
+        Secondary Tip.
+    */
+
+    if (secondaryTip) {
+
+        const screen =
+            imageToScreen(
+                secondaryTip.x,
+                secondaryTip.y
+            );
+
+
+        if (
+            Math.hypot(
+                screen.x - sx,
+                screen.y - sy
+            ) <= 20
+        ) {
+
+            return {
+
+                type:
+                    "secondaryTip"
+            };
+        }
+    }
+
+
+    if (!axis)
+        return null;
+
+
+    /*
+        Axis Start.
+    */
+
+    const start =
+        imageToScreen(
+            axis.x1,
+            axis.y1
+        );
+
+
+    if (
+        Math.hypot(
+            start.x - sx,
+            start.y - sy
+        ) <= 15
+    ) {
+
+        return {
+
+            type:
+                "axisStart"
+        };
+    }
+
+
+    /*
+        Axis End.
+    */
+
+    const end =
+        imageToScreen(
+            axis.x2,
+            axis.y2
+        );
+
+
+    if (
+        Math.hypot(
+            end.x - sx,
+            end.y - sy
+        ) <= 15
+    ) {
+
+        return {
+
+            type:
+                "axisEnd"
+        };
+    }
+
+
+    return null;
+}
+
+
+// ============================================================
+// Touch / Pointer gesture helpers
+// ============================================================
+
+function pointerPosition(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+    };
+}
+
+function beginPinch() {
+    const pts = Array.from(activePointers.values());
+    if (pts.length < 2) return;
+
+    const a = pts[0];
+    const b = pts[1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance < 2) return;
+
+    pinchStartDistance = distance;
+    pinchStartZoom = zoom;
+    pinchStartMidpoint = {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2
+    };
+    pinchImagePoint = screenToImage(
+        pinchStartMidpoint.x,
+        pinchStartMidpoint.y
+    );
+    isPinching = true;
+    dragging = false;
+    dragObject = null;
+    canvas.classList.remove("dragging");
+}
+
+function updatePinch() {
+    if (!isPinching || activePointers.size < 2) return;
+
+    const pts = Array.from(activePointers.values());
+    const a = pts[0];
+    const b = pts[1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance < 2 || pinchStartDistance < 2) return;
+
+    const midpoint = {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2
+    };
+
+    const newZoom = clamp(
+        pinchStartZoom * (distance / pinchStartDistance),
+        0.1,
+        8
+    );
+
+    zoom = newZoom;
+
+    // Keep the image point under the fingers anchored while zooming,
+    // and move the canvas with the midpoint for natural two-finger pan.
+    const projected = imageToScreen(
+        pinchImagePoint.x,
+        pinchImagePoint.y
+    );
+    offsetX += midpoint.x - projected.x;
+    offsetY += midpoint.y - projected.y;
+
+    pinchStartMidpoint = midpoint;
+    updateZoomLabel();
+    draw();
+}
+
+// ============================================================
+// Pointer Down
+// ============================================================
+
+canvas.addEventListener(
+    "pointerdown",
+    event => {
+
+        if (!imageLoaded)
+            return;
+
+        const pos = pointerPosition(event);
+        activePointers.set(event.pointerId, pos);
+
+        // A second finger switches immediately to canvas pinch/pan.
+        if (event.pointerType === "touch" && activePointers.size >= 2) {
+            beginPinch();
+            return;
+        }
+
+        canvas.setPointerCapture(event.pointerId);
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const sx =
+            event.clientX -
+            rect.left;
+
+        const sy =
+            event.clientY -
+            rect.top;
+
+
+        const point =
+            screenToImage(
+                sx,
+                sy
+            );
+
+
+        /*
+            Existing annotation handles always
+            have priority over mode actions.
+        */
+
+        const hit =
+            findDraggableObject(
+                sx,
+                sy
+            );
+
+
+        if (hit) {
+
+            dragObject =
+                hit;
+
+            dragging =
+                true;
+
+            return;
+        }
+
+
+        // ====================================================
+        // SECONDARY TIP
+        // ====================================================
+
+        /*
+            In Feather mode, don't accidentally create a
+            Secondary Tip.
+
+            Secondary Tip is established with a click in
+            Primary Projection mode after an axis exists.
+        */
+
+
+        if (
+            mode === "axis" &&
+            axis
+        ) {
+
+            /*
+                If no Secondary Tip exists, clicking empty
+                space in axis mode creates one.
+
+                This allows Secondary Tip to be deliberately
+                positioned away from the axis.
+            */
+
+            if (!secondaryTip) {
+
+                secondaryTip = {
+
+                    x:
+                        point.x,
+
+                    y:
+                        point.y
+                };
+
+
+                updateMeasurements();
+
+                draw();
+
+                status.textContent =
+                    "Secondary Tip placed. Drag the white marker to adjust it.";
+
+                return;
+            }
+
+
+            /*
+                Existing axis means empty clicks don't
+                create a new axis.
+            */
+
+            status.textContent =
+                "Axis already exists. Drag a handle or use Reset to start over.";
+
+            return;
+        }
+
+
+        // ====================================================
+        // FEATHER TIPS
+        // ====================================================
+
+        if (
+            mode === "points"
+        ) {
+
+            if (
+                featherTips.length >= 6
+            ) {
+
+                status.textContent =
+                    "Maximum reached: P8–P3 only.";
+
+                return;
+            }
+
+
+            const number =
+                nextAvailableFeatherNumber();
+
+
+            featherTips.push({
+
+                id:
+                    (
+                        crypto.randomUUID
+                            ? crypto.randomUUID()
+                            : String(
+                                Date.now() +
+                                Math.random()
+                            )
+                    ),
+
+                label:
+                    `P${number}`,
+
+                x:
+                    point.x,
+
+                y:
+                    point.y
+            });
+
+
+            updateMeasurements();
+
+            draw();
+
+            status.textContent =
+                `Added P${number}. Drag the blue marker to adjust it.`;
+
+            if (featherTips.length >= 6) {
+                setMode("pan");
+                status.textContent =
+                    "P3 placed. Pan mode.";
+            }
+
+            return;
+        }
+
+
+        // ====================================================
+        // AXIS CREATION
+        // ====================================================
+
+        if (
+            mode === "axis" &&
+            !axis
+        ) {
+
+            axis = {
+
+                x1:
+                    point.x,
+
+                y1:
+                    point.y,
+
+                x2:
+                    point.x,
+
+                y2:
+                    point.y
+            };
+
+
+            dragging =
+                true;
+
+            draw();
+
+            return;
+        }
+
+
+        // ====================================================
+        // MEASURE
+        // ====================================================
+
+        if (
+            mode === "measure"
+        ) {
+
+            currentMeasurement = {
+
+                x1:
+                    point.x,
+
+                y1:
+                    point.y,
+
+                x2:
+                    point.x,
+
+                y2:
+                    point.y
+            };
+
+
+            dragging =
+                true;
+
+            draw();
+
+            return;
+        }
+
+
+        // ====================================================
+        // PAN
+        // ====================================================
+
+        if (
+            mode === "pan"
+        ) {
+
+            dragging =
+                true;
+
+            panStart = {
+
+                x:
+                    event.clientX,
+
+                y:
+                    event.clientY
+            };
+
+            panOrigin = {
+
+                x:
+                    offsetX,
+
+                y:
+                    offsetY
+            };
+
+            canvas.classList.add(
+                "dragging"
+            );
+        }
+
+    }
+);
+
+
+// ============================================================
+// Mouse Move
+// ============================================================
+
+canvas.addEventListener(
+    "pointermove",
+    event => {
+
+        if (activePointers.has(event.pointerId)) {
+            activePointers.set(event.pointerId, pointerPosition(event));
+        }
+
+        if (isPinching) {
+            updatePinch();
+            return;
+        }
+
+        if (!dragging)
+            return;
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const sx =
+            event.clientX -
+            rect.left;
+
+        const sy =
+            event.clientY -
+            rect.top;
+
+
+        const point =
+            screenToImage(
+                sx,
+                sy
+            );
+
+
+        /*
+            Existing object.
+        */
+
+        if (dragObject) {
+
+            updateDraggedObject(
+                point
+            );
+
+            updateMeasurements();
+
+            draw();
+
+            return;
+        }
+
+
+        /*
+            New axis.
+        */
+
+        if (
+            mode === "axis" &&
+            axis &&
+            !secondaryTip
+        ) {
+
+            /*
+                Only allow creation drag if this is
+                actually the initial axis creation.
+
+                Once the axis exists, normal mouse moves
+                should not change it.
+            */
+
+            axis.x2 =
+                point.x;
+
+            axis.y2 =
+                point.y;
+
+            draw();
+
+            return;
+        }
+
+
+        /*
+            Generic measurement.
+        */
+
+        if (
+            mode === "measure" &&
+            currentMeasurement
+        ) {
+
+            currentMeasurement.x2 =
+                point.x;
+
+            currentMeasurement.y2 =
+                point.y;
+
+            draw();
+
+            return;
+        }
+
+
+        /*
+            Pan.
+        */
+
+        if (
+            mode === "pan"
+        ) {
+
+            offsetX =
+                panOrigin.x +
+                (
+                    event.clientX -
+                    panStart.x
+                );
+
+            offsetY =
+                panOrigin.y +
+                (
+                    event.clientY -
+                    panStart.y
+                );
+
+            draw();
+        }
+
+    }
+);
+
+
+// ============================================================
+// Mouse Up
+// ============================================================
+
+canvas.addEventListener(
+    "pointerup",
+    finishMouseAction
+);
+
+canvas.addEventListener(
+    "pointercancel",
+    finishMouseAction
+);
+
+
+function finishMouseAction(event) {
+
+    if (event) {
+        activePointers.delete(event.pointerId);
+    }
+
+    // End the gesture when fewer than two touches remain. Do not let
+    // pointerup from a pinch accidentally create an annotation.
+    if (isPinching) {
+        if (activePointers.size < 2) {
+            isPinching = false;
+            pinchStartDistance = 0;
+            pinchImagePoint = null;
+        }
+        if (event && canvas.hasPointerCapture(event.pointerId)) {
+            canvas.releasePointerCapture(event.pointerId);
+        }
+        draw();
+        return;
+    }
+
+    if (!dragging)
+        return;
+
+    if (event && canvas.hasPointerCapture(event.pointerId)) {
+        canvas.releasePointerCapture(event.pointerId);
+    }
+
+
+    dragging =
+        false;
+
+
+    canvas.classList.remove(
+        "dragging"
+    );
+
+
+    if (
+        mode === "axis" &&
+        axis &&
+        !dragObject &&
+        axisLength() <= 2
+    ) {
+
+        axis =
+            null;
+
+        updateMeasurements();
+        draw();
+
+        status.textContent =
+            "Click and drag to draw the Primary Projection axis.";
+
+        return;
+    }
+
+
+    /*
+        If we were creating the axis, initialize
+        Secondary Tip at the axis origin.
+
+        It can immediately be dragged off-axis.
+    */
+
+    if (
+        mode === "axis" &&
+        axis &&
+        !dragObject &&
+        axisLength() > 2
+    ) {
+
+        secondaryTip = {
+
+            x:
+                axis.x1,
+
+            y:
+                axis.y1
+        };
+
+
+        setMode("pan");
+
+        status.textContent =
+            "Axis created. Drag the white Secondary Tip marker anywhere on the image.";
+    }
+
+
+    /*
+        Finish generic measurement.
+    */
+
+    if (
+        mode === "measure" &&
+        currentMeasurement
+    ) {
+
+        const length =
+            Math.hypot(
+                currentMeasurement.x2 -
+                currentMeasurement.x1,
+
+                currentMeasurement.y2 -
+                currentMeasurement.y1
+            );
+
+
+        if (
+            length > 2
+        ) {
+
+            measurements.push(
+                currentMeasurement
+            );
+        }
+
+
+        currentMeasurement =
+            null;
+
+        updateMeasurements();
+    }
+
+
+    dragObject =
+        null;
+
+
+    draw();
+}
+
+
+// ============================================================
+// Drag existing object
+// ============================================================
+
+function updateDraggedObject(
+    point
+) {
+
+    if (!dragObject)
+        return;
+
+
+    /*
+        Feather.
+    */
+
+    if (
+        dragObject.type ===
+        "feather"
+    ) {
+
+        const feather =
+            featherTips[
+                dragObject.index
+            ];
+
+
+        if (!feather)
+            return;
+
+
+        feather.x =
+            point.x;
+
+        feather.y =
+            point.y;
+
+        return;
+    }
+
+
+    /*
+        Secondary Tip.
+
+        IMPORTANT:
+        No projection/constraining here.
+
+        It is a real independent point.
+    */
+
+    if (
+        dragObject.type ===
+        "secondaryTip"
+    ) {
+
+        if (!secondaryTip)
+            return;
+
+
+        secondaryTip.x =
+            point.x;
+
+        secondaryTip.y =
+            point.y;
+
+        return;
+    }
+
+
+    /*
+        Axis start.
+    */
+
+    if (
+        dragObject.type ===
+        "axisStart"
+    ) {
+
+        axis.x1 =
+            point.x;
+
+        axis.y1 =
+            point.y;
+
+        return;
+    }
+
+
+    /*
+        Axis end.
+    */
+
+    if (
+        dragObject.type ===
+        "axisEnd"
+    ) {
+
+        axis.x2 =
+            point.x;
+
+        axis.y2 =
+            point.y;
+
+        return;
+    }
+}
+
+
+// ============================================================
+// Zoom
+// ============================================================
+
+canvas.addEventListener(
+    "wheel",
+    event => {
+
+        if (!imageLoaded)
+            return;
+
+
+        event.preventDefault();
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const mouseX =
+            event.clientX -
+            rect.left;
+
+        const mouseY =
+            event.clientY -
+            rect.top;
+
+
+        const before =
+            screenToImage(
+                mouseX,
+                mouseY
+            );
+
+
+        const factor =
+            event.deltaY < 0
+                ? 1.15
+                : 1 / 1.15;
+
+
+        zoom =
+            clamp(
+                zoom * factor,
+                .1,
+                8
+            );
+
+
+        const after =
+            imageToScreen(
+                before.x,
+                before.y
+            );
+
+
+        offsetX +=
+            mouseX -
+            after.x;
+
+        offsetY +=
+            mouseY -
+            after.y;
+
+
+        updateZoomLabel();
+
+        draw();
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+function setZoom(
+    newZoom
+) {
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+
+    const cx =
+        rect.width / 2;
+
+    const cy =
+        rect.height / 2;
+
+
+    const before =
+        screenToImage(
+            cx,
+            cy
+        );
+
+
+    zoom =
+        clamp(
+            newZoom,
+            .05,
+            20
+        );
+
+
+    const after =
+        imageToScreen(
+            before.x,
+            before.y
+        );
+
+
+    offsetX +=
+        cx -
+        after.x;
+
+    offsetY +=
+        cy -
+        after.y;
+
+
+    updateZoomLabel();
+
+    draw();
+}
+
+
+document.getElementById(
+    "zoomIn"
+).onclick =
+    () => {
+
+        setZoom(
+            zoom * 1.25
+        );
+    };
+
+
+document.getElementById(
+    "zoomOut"
+).onclick =
+    () => {
+
+        setZoom(
+            zoom / 1.25
+        );
+    };
+
+
+function updateZoomLabel() {
+
+    zoomLabel.textContent =
+        `${Math.round(zoom * 100)}%`;
+}
+
+
+// ============================================================
+// Fit
+// ============================================================
+
+function fitImage() {
+
+    if (!imageLoaded)
+        return;
+
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+
+    const scaleX =
+        rect.width /
+        imageWidth;
+
+    const scaleY =
+        rect.height /
+        imageHeight;
+
+
+    zoom =
+        Math.min(
+            scaleX,
+            scaleY
+        ) * .9;
+
+
+    offsetX =
+        (
+            rect.width -
+            imageWidth * zoom
+        ) / 2;
+
+
+    offsetY =
+        (
+            rect.height -
+            imageHeight * zoom
+        ) / 2;
+
+
+    updateZoomLabel();
+
+    draw();
+}
+
+
+document.getElementById(
+    "fitBtn"
+).onclick =
+    fitImage;
+
+
+// ============================================================
+// Measurement calculations
+// ============================================================
+
+function updateMeasurements() {
+
+    let html = "";
+
+
+    // --------------------------------------------------------
+    // Primary projection
+    // --------------------------------------------------------
+
+    if (axis) {
+
+        const fullAxis =
+            axisLength();
+
+
+        html += `
+
+            <div class="section">
+
+                <div class="measurement">
+
+                    <strong>
+                        Primary Projection
+                    </strong>
+
+                    <br><br>
+
+                    Full axis:
+                    <strong>
+                        ${fullAxis.toFixed(2)} px
+                    </strong>
+
+                </div>
+
+        `;
+
+
+        if (secondaryTip) {
+
+            const projection =
+                projectOntoAxis(
+                    secondaryTip
+                );
+
+
+            if (projection) {
+
+                const primaryProjection =
+                    fullAxis - projection.t *
+                    fullAxis;
+
+
+                const ratio =
+                    fullAxis > 0
+                        ? primaryProjection /
+                          fullAxis
+                        : 0;
+
+
+                html += `
+
+                    <div class="measurement">
+
+                        Primary projection:
+                        <strong>
+                            ${primaryProjection.toFixed(2)} px
+                        </strong>
+
+                        <br>
+
+                        Projection / full axis:
+                        <strong>
+                            ${ratio.toFixed(4)}
+                        </strong>
+
+                        <br>
+
+                        <span class="small">
+
+                            ${(
+                                ratio * 100
+                            ).toFixed(2)}%
+
+                        </span>
+
+                    </div>
+
+                `;
+            }
+        }
+
+
+        html += `
+            </div>
+        `;
+    }
+
+
+    // --------------------------------------------------------
+    // Feather spacing
+    // --------------------------------------------------------
+
+    if (
+        axis &&
+        featherTips.length >= 2
+    ) {
+
+        const projectedFeathers =
+            featherTips
+                .map(
+                    feather => {
+
+                        const projection =
+                            projectOntoAxis(
+                                feather
+                            );
+
+
+                        return {
+
+                            feather,
+
+                            t:
+                                projection
+                                    ? projection.t
+                                    : null
+                        };
+                    }
+                )
+                .filter(
+                    item =>
+                        item.t !== null
+                )
+                .sort(
+                    (a, b) =>
+                        a.t -
+                        b.t
+                );
+
+
+        if (
+            projectedFeathers.length >= 2
+        ) {
+
+            html += `
+
+                <div class="section">
+
+                    <strong>
+                        Projected Feather Spacing
+                    </strong>
+
+                    <div class="small">
+
+                        Spacing is measured along
+                        the primary axis.
+
+                        <br>
+
+                        Perpendicular distance from
+                        the feather tip is ignored.
+
+                    </div>
+
+            `;
+
+
+            for (
+                let i = 1;
+                i < projectedFeathers.length;
+                i++
+            ) {
+
+                const previous =
+                    projectedFeathers[
+                        i - 1
+                    ];
+
+                const current =
+                    projectedFeathers[
+                        i
+                    ];
+
+
+                const spacing =
+                    Math.abs(
+                        current.t -
+                        previous.t
+                    ) *
+                    axisLength();
+
+
+                html += `
+
+                    <div class="measurement">
+
+                        <strong>
+
+                            ${previous.feather.label}
+                            →
+                            ${current.feather.label}
+
+                        </strong>
+
+                        <button
+                            class="delete"
+                            onclick="deleteFeather('${current.feather.id}')">
+
+                            ×
+
+                        </button>
+
+                        <br>
+
+                        Spacing:
+                        <strong>
+                            ${spacing.toFixed(2)} px
+                        </strong>
+
+                    </div>
+
+                `;
+            }
+
+            // ----------------------------------------------------
+            // P7-P6 / P6-P5 ratio
+            // ----------------------------------------------------
+
+            const p7 = projectedFeathers.find(
+                item => item.feather.label === "P7"
+            );
+
+            const p6 = projectedFeathers.find(
+                item => item.feather.label === "P6"
+            );
+
+            const p5 = projectedFeathers.find(
+                item => item.feather.label === "P5"
+            );
+
+            if (p7 && p6 && p5) {
+
+                const gapP7P6 =
+                    Math.abs(p7.t - p6.t) * axisLength();
+
+                const gapP6P5 =
+                    Math.abs(p6.t - p5.t) * axisLength();
+
+                const ratio =
+                    gapP6P5 > 0
+                        ?  gapP6P5 / gapP7P6
+                        : null;
+
+                if (ratio !== null) {
+                    html += `
+
+                        <div class="measurement">
+
+                            P6–P5 / P7–P6 ratio:
+                            <strong>
+                                ${ratio.toFixed(4)}
+                            </strong>
+
+                        </div>
+
+                    `;
+                }
+            }
+            
+            html += `
+                </div>
+            `;
+        }
+    }
+
+
+    // --------------------------------------------------------
+    // Generic measurements
+    // --------------------------------------------------------
+
+    if (
+        measurements.length
+    ) {
+
+        html += `
+
+            <div class="section">
+
+                <strong>
+                    Other Measurements
+                </strong>
+
+            </div>
+
+        `;
+
+
+        measurements.forEach(
+            (
+                measurement,
+                index
+            ) => {
+
+                const length =
+                    Math.hypot(
+                        measurement.x2 -
+                        measurement.x1,
+
+                        measurement.y2 -
+                        measurement.y1
+                    );
+
+
+                html += `
+
+                    <div class="measurement">
+
+                        Measurement ${index + 1}
+
+                        <button
+                            class="delete"
+                            onclick="deleteMeasurement(${index})">
+
+                            ×
+
+                        </button>
+
+                        <br>
+
+                        ${length.toFixed(2)} px
+
+                    </div>
+
+                `;
+            }
+        );
+    }
+
+
+    if (!html) {
+
+        html = `
+
+            <div class="info">
+
+                Open an image and Draw a Primary Projection
+                axis to begin.
+
+            </div>
+
+        `;
+    }
+
+
+    measurementsDiv.innerHTML =
+        html;
+}
+
+
+// ============================================================
+// Delete feather
+// ============================================================
+
+window.deleteFeather =
+    function(id) {
+
+        featherTips =
+            featherTips.filter(
+                feather =>
+                    feather.id !== id
+            );
+
+
+        /*
+            Collapse the labels so they always
+            remain sequential in US order, P8–P3.
+
+            Example:
+
+            P8 P7 P6 P5 P4
+                 ↓ delete P6
+            P8 P7 P6 P5
+
+            The physical points remain in place.
+        */
+
+        renumberFeathers();
+
+
+        updateMeasurements();
+
+        draw();
+    };
+
+
+// ============================================================
+// Delete generic measurement
+// ============================================================
+
+window.deleteMeasurement =
+    function(index) {
+
+        measurements.splice(
+            index,
+            1
+        );
+
+
+        updateMeasurements();
+
+        draw();
+    };
+
+
+// ============================================================
+// Reset
+// ============================================================
+
+function resetAnnotations() {
+    axis =
+        null;
+
+    secondaryTip =
+        null;
+
+    featherTips =
+        [];
+
+    measurements =
+        [];
+
+    currentMeasurement =
+        null;
+
+    updateMeasurements();
+    draw();
+}
+
+document.getElementById(
+    "resetBtn"
+).onclick =
+    () => {
+
+        resetAnnotations();
+
+
+        fitImage();
+
+        setMode("axis");
+
+    };
+
+
+// ============================================================
+// Keyboard shortcuts
+// ============================================================
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key ===
+            "Escape"
+        ) {
+
+            dragging =
+                false;
+
+            dragObject =
+                null;
+
+            currentMeasurement =
+                null;
+
+            draw();
+        }
+
+
+        if (
+            event.key === "1"
+        )
+            setMode("pan");
+
+
+        if (
+            event.key === "2"
+        )
+            setMode("axis");
+
+
+        if (
+            event.key === "3"
+        )
+            setMode("points");
+
+
+        if (
+            event.key === "4"
+        )
+            setMode("measure");
+
+    }
+);
+
+
+function updateWorkflowHighlight() {
+    [openImageBtn, axisBtn, pointBtn].forEach(
+        button => button.classList.remove("suggested")
+    );
+
+    if (!imageLoaded) {
+        openImageBtn.classList.add("suggested");
+    } else if (!axis && mode !== "axis") {
+        axisBtn.classList.add("suggested");
+    } else if (axis && mode === "pan" && featherTips.length < 6) {
+        pointBtn.classList.add("suggested");
+    }
+}
+
+
+instructionsToggle.addEventListener(
+    "click",
+    () => {
+        const isExpanded =
+            instructionsToggle.getAttribute("aria-expanded") === "true";
+
+        instructionsToggle.setAttribute(
+            "aria-expanded",
+            String(!isExpanded)
+        );
+
+        instructionBody.classList.toggle(
+            "hidden",
+            isExpanded
+        );
+
+        instructionsToggle.textContent =
+            isExpanded ? "Expand" : "Collapse";
+    }
+);
+
+
+setMode("pan");
+updateWorkflowHighlight();
