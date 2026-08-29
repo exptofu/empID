@@ -1839,8 +1839,7 @@ canvas.addEventListener(
         // ====================================================
 
         if (
-            mode === "axis" &&
-            !axis
+            mode === "axis"
         ) {
 
             axis = {

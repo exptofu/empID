@@ -434,16 +434,73 @@ canvas.dragging {
         11px;
 }
 
+button.delete,
 .delete {
+
+    display:
+        inline-flex;
+
+    flex-direction:
+        row;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
 
     float:
         right;
 
+    min-width:
+        28px;
+
+    width:
+        28px;
+
+    min-height:
+        28px;
+
+    height:
+        28px;
+
     padding:
-        2px 6px;
+        0;
+
+    gap:
+        0;
 
     font-size:
-        11px;
+        16px;
+    line-height:
+        1;
+
+    background:
+        transparent;
+
+    border:
+        1px solid #666;
+
+    color:
+        #eee;
+}
+
+button.delete > div,
+.delete > div,
+button.delete > span,
+.delete > span {
+    display: none;
+}
+
+#measurements {
+    max-height:
+        42vh;
+
+    overflow-y:
+        auto;
+
+    padding-right:
+        4px;
 }
 
 .info {
@@ -572,6 +629,11 @@ canvas.dragging {
 
     .measurement {
         padding: 4px 0;
+    }
+
+    #measurements {
+        max-height:
+            26vh;
     }
 
     #status {
