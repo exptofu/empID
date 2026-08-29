@@ -580,7 +580,10 @@ function applySavedSession(snapshot) {
 
         if (wantsFitZoom || snapshot.zoomMode === "fit") {
             fitImage();
+            updateMeasurements();
+            updateZoomLabel();
             setMode(mode);
+            draw();
         } else if (snapshot.zoomMode === "fill") {
             zoomMode = "fill";
             updateZoomLabel();
