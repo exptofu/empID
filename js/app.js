@@ -51,7 +51,7 @@ const instructionMessages = {
     launch:
         "Load an image to begin. All processing is local and never leaves your device",
     imageLoaded:
-        "Select the Primary Projection button to align measurements",
+        "Select the Primary Axis button to align measurements",
     axis:
         "Click and drag to create an axis to measure by. These points can be dragged after",
     featherTipsReady:
@@ -128,6 +128,9 @@ let secondaryTip =
 
 let featherTips =
     [];
+
+let pendingFeather =
+    null;
 
 
 // ============================================================
@@ -869,7 +872,7 @@ function drawSecondaryTip() {
 
 function drawFeatherTips() {
 
-    featherTips.forEach(
+    const drawOne =
         feather => {
 
             const actual =
@@ -961,8 +964,15 @@ function drawFeatherTips() {
                 feather.label,
                 "#50beff"
             );
-        }
+        };
+
+    featherTips.forEach(
+        drawOne
     );
+
+    if (pendingFeather) {
+        drawOne(pendingFeather);
+    }
 }
 
 
@@ -1313,7 +1323,7 @@ function setMode(
         if (axis) {
 
                 status.textContent =
-                    "Drag axis handles or Secondary Tip. Use Reset to start over.";
+                    "Drag axis handles. Use Reset to start over.";
 
         } else {
 
@@ -1466,6 +1476,33 @@ function findFeatherAt(
 }
 
 
+function distanceToSegment(
+    px,
+    py,
+    x1,
+    y1,
+    x2,
+    y2
+) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+
+    if (dx === 0 && dy === 0)
+        return Math.hypot(px - x1, py - y1);
+
+    const t = clamp(
+        ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy),
+        0,
+        1
+    );
+
+    const cx = x1 + dx * t;
+    const cy = y1 + dy * t;
+
+    return Math.hypot(px - cx, py - cy);
+}
+
+
 function findDraggableObject(
     sx,
     sy
@@ -1497,42 +1534,9 @@ function findDraggableObject(
     }
 
 
-    /*
-        Secondary Tip.
-    */
-
-    if (secondaryTip) {
-
-        const screen =
-            imageToScreen(
-                secondaryTip.x,
-                secondaryTip.y
-            );
-
-
-        if (
-            Math.hypot(
-                screen.x - sx,
-                screen.y - sy
-            ) <= 20
-        ) {
-
-            return {
-
-                type:
-                    "secondaryTip"
-            };
-        }
-    }
-
-
     if (!axis)
         return null;
 
-
-    /*
-        Axis Start.
-    */
 
     const start =
         imageToScreen(
@@ -1540,6 +1544,15 @@ function findDraggableObject(
             axis.y1
         );
 
+    const end =
+        imageToScreen(
+            axis.x2,
+            axis.y2
+        );
+
+    /*
+        Endpoint handles should always win.
+    */
 
     if (
         Math.hypot(
@@ -1556,17 +1569,6 @@ function findDraggableObject(
     }
 
 
-    /*
-        Axis End.
-    */
-
-    const end =
-        imageToScreen(
-            axis.x2,
-            axis.y2
-        );
-
-
     if (
         Math.hypot(
             end.x - sx,
@@ -1578,6 +1580,28 @@ function findDraggableObject(
 
             type:
                 "axisEnd"
+        };
+    }
+
+
+    const axisDistance =
+        distanceToSegment(
+            sx,
+            sy,
+            start.x,
+            start.y,
+            end.x,
+            end.y
+        );
+
+    if (
+        axisDistance <= 14
+    ) {
+
+        return {
+
+            type:
+                "axisLine"
         };
     }
 
@@ -1724,69 +1748,26 @@ canvas.addEventListener(
             dragObject =
                 hit;
 
-            dragging =
-                true;
+            if (
+                hit.type ===
+                "axisLine"
+            ) {
 
-            return;
-        }
-
-
-        // ====================================================
-        // SECONDARY TIP
-        // ====================================================
-
-        /*
-            In Feather mode, don't accidentally create a
-            Secondary Tip.
-
-            Secondary Tip is established with a click in
-            Primary Projection mode after an axis exists.
-        */
-
-
-        if (
-            mode === "axis" &&
-            axis
-        ) {
-
-            /*
-                If no Secondary Tip exists, clicking empty
-                space in axis mode creates one.
-
-                This allows Secondary Tip to be deliberately
-                positioned away from the axis.
-            */
-
-            if (!secondaryTip) {
-
-                secondaryTip = {
-
-                    x:
-                        point.x,
-
-                    y:
-                        point.y
+                dragObject.initialAxis = {
+                    x1: axis.x1,
+                    y1: axis.y1,
+                    x2: axis.x2,
+                    y2: axis.y2
                 };
 
-
-                updateMeasurements();
-
-                draw();
-
-                status.textContent =
-                    "Secondary Tip placed. Drag the white marker to adjust it.";
-
-                return;
+                dragObject.startPoint = {
+                    x: point.x,
+                    y: point.y
+                };
             }
 
-
-            /*
-                Existing axis means empty clicks don't
-                create a new axis.
-            */
-
-            status.textContent =
-                "Axis already exists. Drag a handle or use Reset to start over.";
+            dragging =
+                true;
 
             return;
         }
@@ -1814,8 +1795,7 @@ canvas.addEventListener(
             const number =
                 nextAvailableFeatherNumber();
 
-
-            featherTips.push({
+            pendingFeather = {
 
                 id:
                     (
@@ -1835,21 +1815,20 @@ canvas.addEventListener(
 
                 y:
                     point.y
-            });
+            };
 
+            dragObject = {
+                type:
+                    "pendingFeather"
+            };
 
-            updateMeasurements();
+            dragging =
+                true;
 
             draw();
 
             status.textContent =
-                `Added P${number}. Drag the blue marker to adjust it.`;
-
-            if (featherTips.length >= 6) {
-                setMode("pan");
-                status.textContent =
-                    "P3 placed. Pan mode.";
-            }
+                `Position P${number} and release to place it.`;
 
             return;
         }
@@ -2054,6 +2033,24 @@ canvas.addEventListener(
         */
 
         if (
+            dragObject &&
+            dragObject.type ===
+            "pendingFeather"
+        ) {
+
+            pendingFeather.x =
+                point.x;
+
+            pendingFeather.y =
+                point.y;
+
+            draw();
+
+            return;
+        }
+
+
+        if (
             mode === "measure" &&
             currentMeasurement
         ) {
@@ -2172,13 +2169,6 @@ function finishMouseAction(event) {
     }
 
 
-    /*
-        If we were creating the axis, initialize
-        Secondary Tip at the axis origin.
-
-        It can immediately be dragged off-axis.
-    */
-
     if (
         mode === "axis" &&
         axis &&
@@ -2186,26 +2176,46 @@ function finishMouseAction(event) {
         axisLength() > 2
     ) {
 
-        secondaryTip = {
-
-            x:
-                axis.x1,
-
-            y:
-                axis.y1
-        };
-
-
         setMode("pan");
 
         status.textContent =
-            "Axis created. Drag the white Secondary Tip marker anywhere on the image.";
+            "Pan mode";
+
+        draw();
+
+        return;
     }
 
 
     /*
         Finish generic measurement.
     */
+
+    if (
+        dragObject &&
+        dragObject.type ===
+        "pendingFeather"
+    ) {
+
+        featherTips.push(
+            pendingFeather
+        );
+
+        pendingFeather =
+            null;
+
+        updateMeasurements();
+
+        status.textContent =
+            `Added P${featherTips[featherTips.length - 1].label.slice(1)}. Drag the blue marker to adjust it.`;
+
+        if (featherTips.length >= 6) {
+            setMode("pan");
+            status.textContent =
+                "P3 placed. Pan mode.";
+        }
+    }
+
 
     if (
         mode === "measure" &&
@@ -2260,6 +2270,28 @@ function updateDraggedObject(
 
 
     /*
+        Pending feather placement.
+    */
+
+    if (
+        dragObject.type ===
+        "pendingFeather"
+    ) {
+
+        if (!pendingFeather)
+            return;
+
+        pendingFeather.x =
+            point.x;
+
+        pendingFeather.y =
+            point.y;
+
+        return;
+    }
+
+
+    /*
         Feather.
     */
 
@@ -2289,28 +2321,37 @@ function updateDraggedObject(
 
 
     /*
-        Secondary Tip.
-
-        IMPORTANT:
-        No projection/constraining here.
-
-        It is a real independent point.
+        Axis line.
     */
 
     if (
         dragObject.type ===
-        "secondaryTip"
+        "axisLine"
     ) {
 
-        if (!secondaryTip)
-            return;
+        const dx =
+            point.x -
+            dragObject.startPoint.x;
 
+        const dy =
+            point.y -
+            dragObject.startPoint.y;
 
-        secondaryTip.x =
-            point.x;
+        axis.x1 =
+            dragObject.initialAxis.x1 +
+            dx;
 
-        secondaryTip.y =
-            point.y;
+        axis.y1 =
+            dragObject.initialAxis.y1 +
+            dy;
+
+        axis.x2 =
+            dragObject.initialAxis.x2 +
+            dx;
+
+        axis.y2 =
+            dragObject.initialAxis.y2 +
+            dy;
 
         return;
     }
@@ -2607,61 +2648,6 @@ function updateMeasurements() {
                 </div>
 
         `;
-
-
-        if (secondaryTip) {
-
-            const projection =
-                projectOntoAxis(
-                    secondaryTip
-                );
-
-
-            if (projection) {
-
-                const primaryProjection =
-                    fullAxis - projection.t *
-                    fullAxis;
-
-
-                const ratio =
-                    fullAxis > 0
-                        ? primaryProjection /
-                          fullAxis
-                        : 0;
-
-
-                html += `
-
-                    <div class="measurement">
-
-                        Primary projection:
-                        <strong>
-                            ${primaryProjection.toFixed(2)} px
-                        </strong>
-
-                        <br>
-
-                        Projection / full axis:
-                        <strong>
-                            ${ratio.toFixed(4)}
-                        </strong>
-
-                        <br>
-
-                        <span class="small">
-
-                            ${(
-                                ratio * 100
-                            ).toFixed(2)}%
-
-                        </span>
-
-                    </div>
-
-                `;
-            }
-        }
 
 
         html += `

@@ -33,7 +33,7 @@ body {
 
 #toolbar {
 
-    height: 54px;
+    height: 72px;
     flex-shrink: 0;
 
     display: flex;
@@ -57,11 +57,17 @@ button,
     display:
         inline-flex;
 
+    flex-direction:
+        column;
+
     align-items:
         center;
 
     justify-content:
         center;
+
+    gap:
+        4px;
 
     border:
         1px solid #555;
@@ -93,6 +99,35 @@ button:hover,
 
     background:
         #444;
+}
+
+button > div,
+.file-button > div {
+    width: 30px;
+    height: 30px;
+    display: inline-block;
+    position: relative;
+    flex-shrink: 0;
+}
+
+button > div svg,
+.file-button > div svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+button > span,
+.file-button > span {
+    display: block;
+    text-align: center;
+    line-height: 1.1;
+    font-size: 11px;
 }
 
 button.current {
@@ -472,8 +507,9 @@ canvas.dragging {
 
     button,
     .file-button {
-        min-height: 40px;
-        padding: 9px 12px;
+        min-height: 52px;
+        min-width: 64px;
+        padding: 8px 8px;
         font-size: 11px;
         line-height: 1.15;
         white-space: nowrap;
