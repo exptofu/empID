@@ -3590,6 +3590,19 @@ function updateMeasurements() {
             `;
 
 
+            const p7 = projectedFeathers.find(
+                item => item.feather.label === "P7"
+            );
+
+            const p6 = projectedFeathers.find(
+                item => item.feather.label === "P6"
+            );
+
+            const baselineSpacing =
+                p7 && p6
+                    ? Math.abs(p7.t - p6.t) * axisLength()
+                    : null;
+
             for (
                 let i = 1;
                 i < projectedFeathers.length;
@@ -3614,82 +3627,59 @@ function updateMeasurements() {
                     ) *
                     axisLength();
 
+                const relativeLength =
+                    baselineSpacing && baselineSpacing > 0
+                        ? spacing / baselineSpacing
+                        : null;
 
                 html += `
 
                     <div class="measurement">
 
-                        <strong>
+                        <div class="measurement-row">
 
-                            ${previous.feather.label}
-                            →
-                            ${current.feather.label}
+                            <div class="measurement-label">
 
-                        </strong>
+                                <strong>
 
-                        <button
-                            class="delete"
-                            onclick="deleteFeather('${current.feather.id}')">
+                                    ${previous.feather.label}
+                                    →
+                                    ${current.feather.label}
 
-                            ×
+                                </strong>
 
-                        </button>
+                            </div>
 
-                        <br>
+                            <div class="measurement-values">
 
-                        Spacing:
-                        <strong>
-                            ${spacing.toFixed(2)} px
-                        </strong>
+                                <div class="measurement-value">
+                                    ${spacing.toFixed(2)}
+                                    <span class="unit">px</span>
+                                </div>
+
+                                <div class="measurement-value ${(relativeLength === null ? "muted" : "")}">
+                                    ${relativeLength === null
+                                        ? "—"
+                                        : relativeLength.toFixed(2)
+                                    }
+                                    <span class="unit">×</span>
+                                </div>
+
+                            </div>
+
+                            <button
+                                class="delete"
+                                onclick="deleteFeather('${current.feather.id}')">
+
+                                ×
+
+                            </button>
+
+                        </div>
 
                     </div>
 
                 `;
-            }
-
-            // ----------------------------------------------------
-            // P7-P6 / P6-P5 ratio
-            // ----------------------------------------------------
-
-            const p7 = projectedFeathers.find(
-                item => item.feather.label === "P7"
-            );
-
-            const p6 = projectedFeathers.find(
-                item => item.feather.label === "P6"
-            );
-
-            const p5 = projectedFeathers.find(
-                item => item.feather.label === "P5"
-            );
-
-            if (p7 && p6 && p5) {
-
-                const gapP7P6 =
-                    Math.abs(p7.t - p6.t) * axisLength();
-
-                const gapP6P5 =
-                    Math.abs(p6.t - p5.t) * axisLength();
-
-                const ratio =
-                    gapP6P5 > 0
-                        ?  gapP6P5 / gapP7P6
-                        : null;
-
-                if (ratio !== null) {
-                    html += `
-
-                        <div class="measurement">
-
-                            P6–P5 / P7–P6 ratio:
-                            <strong>
-                                ${ratio.toFixed(4)}
-                            </strong>
-
-                        </div>
-
-                    `;
-                }
             }
             
             html += `
@@ -3762,6 +3752,19 @@ function updateMeasurements() {
     }
 
 
+    if (axis || featherTips.length || measurements.length) {
+
+        html += `
+
+            <div class="measurement-copy">
+                <a href="#" onclick="copyMeasurementsToClipboard(); return false;">
+                    Copy to Clipboard
+                </a>
+            </div>
+
+        `;
+    }
+
     if (!html) {
 
         html = `
@@ -3780,6 +3783,176 @@ function updateMeasurements() {
     measurementsDiv.innerHTML =
         html;
 }
+
+
+window.copyMeasurementsToClipboard =
+    async function() {
+
+        const rows = [];
+
+        if (axis) {
+            rows.push([
+                "Primary Projection",
+                "Full axis",
+                axisLength().toFixed(2),
+                ""
+            ]);
+        }
+
+        if (
+            axis &&
+            featherTips.length >= 2
+        ) {
+
+            const projectedFeathers =
+                featherTips
+                    .map(
+                        feather => {
+
+                            const projection =
+                                projectOntoAxis(
+                                    feather
+                                );
+
+                            return {
+                                feather,
+                                t: projection ? projection.t : null
+                            };
+                        }
+                    )
+                    .filter(
+                        item => item.t !== null
+                    )
+                    .sort(
+                        (a, b) => a.t - b.t
+                    );
+
+            if (projectedFeathers.length >= 2) {
+
+                const p7 = projectedFeathers.find(
+                    item => item.feather.label === "P7"
+                );
+
+                const p6 = projectedFeathers.find(
+                    item => item.feather.label === "P6"
+                );
+
+                const baselineSpacing =
+                    p7 && p6
+                        ? Math.abs(p7.t - p6.t) * axisLength()
+                        : null;
+
+                for (
+                    let i = 1;
+                    i < projectedFeathers.length;
+                    i++
+                ) {
+
+                    const previous =
+                        projectedFeathers[i - 1];
+
+                    const current =
+                        projectedFeathers[i];
+
+                    const spacing =
+                        Math.abs(
+                            current.t - previous.t
+                        ) * axisLength();
+
+                    const relativeLength =
+                        baselineSpacing && baselineSpacing > 0
+                            ? spacing / baselineSpacing
+                            : null;
+
+                    rows.push([
+                        "Feather spacing",
+                        `${previous.feather.label} → ${current.feather.label}`,
+                        spacing.toFixed(2),
+                        relativeLength === null
+                            ? ""
+                            : relativeLength.toFixed(2)
+                    ]);
+                }
+            }
+        }
+
+        if (measurements.length) {
+
+            measurements.forEach(
+                (measurement, index) => {
+
+                    const length =
+                        Math.hypot(
+                            measurement.x2 - measurement.x1,
+                            measurement.y2 - measurement.y1
+                        );
+
+                    rows.push([
+                        "Measurement",
+                        `#${index + 1}`,
+                        length.toFixed(2),
+                        ""
+                    ]);
+                }
+            );
+        }
+
+        if (!rows.length) {
+            status.textContent =
+                "There are no measurements to copy.";
+            return;
+        }
+
+        const tableText =
+            [
+                ["Category", "Label", "Pixels", "Relative Length"],
+                ...rows
+            ]
+                .map(
+                    row =>
+                        row
+                            .map(
+                                value =>
+                                    `"${String(value).replace(/"/g, '""')}"`
+                            )
+                            .join("\t")
+                )
+                .join("\n");
+
+        try {
+            await navigator.clipboard.writeText(tableText);
+            status.textContent =
+                "Measurements copied to clipboard.";
+        } catch (error) {
+            console.error("Clipboard copy failed:", error);
+
+            const fallback =
+                document.createElement("textarea");
+
+            fallback.value =
+                tableText;
+            fallback.setAttribute(
+                "readonly",
+                ""
+            );
+            fallback.style.position = "fixed";
+            fallback.style.opacity = "0";
+            document.body.appendChild(fallback);
+            fallback.select();
+
+            try {
+                document.execCommand("copy");
+                status.textContent =
+                    "Measurements copied to clipboard.";
+            } catch (copyError) {
+                console.error("Fallback clipboard copy failed:", copyError);
+                status.textContent =
+                    "Unable to copy measurements to the clipboard.";
+            }
+
+            document.body.removeChild(fallback);
+        }
+    };
 
 
 // ============================================================
