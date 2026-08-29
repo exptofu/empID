@@ -575,6 +575,7 @@ function applySavedSession(snapshot) {
 
         if (wantsFitZoom) {
             fitImage();
+            setMode(mode);
         } else {
             updateMeasurements();
             updateZoomLabel();
@@ -3320,6 +3321,12 @@ function updateZoomLabel() {
         return;
     }
 
+    if (zoomMode === "fill") {
+        zoomLabel.textContent =
+            "Fill";
+        return;
+    }
+
     zoomLabel.textContent =
         `${Math.round(zoom * 100)}%`;
 }
@@ -3334,45 +3341,119 @@ function fitImage() {
     if (!imageLoaded)
         return;
 
-
     const rect =
         canvas.getBoundingClientRect();
 
+    if (zoomMode === "fit") {
+        const scaleX =
+            rect.width /
+            imageWidth;
 
-    const scaleX =
-        rect.width /
-        imageWidth;
+        const scaleY =
+            rect.height /
+            imageHeight;
 
-    const scaleY =
-        rect.height /
-        imageHeight;
+        zoomMode = "fill";
 
+        zoom =
+            Math.min(
+                scaleX,
+                scaleY
+            ) * .9;
+
+        offsetX =
+            (
+                rect.width -
+                imageWidth * zoom
+            ) / 2;
+
+        offsetY =
+            (
+                rect.height -
+                imageHeight * zoom
+            ) / 2;
+
+        updateZoomLabel();
+        draw();
+        return;
+    }
+
+    if (!axis || axisLength() <= 0) {
+        const scaleX =
+            rect.width /
+            imageWidth;
+
+        const scaleY =
+            rect.height /
+            imageHeight;
+
+        zoomMode = "fill";
+
+        zoom =
+            Math.min(
+                scaleX,
+                scaleY
+            ) * 0.9;
+
+        offsetX =
+            (
+                rect.width -
+                imageWidth * zoom
+            ) / 2;
+
+        offsetY =
+            (
+                rect.height -
+                imageHeight * zoom
+            ) / 2;
+
+        updateZoomLabel();
+        draw();
+        return;
+    }
+
+    const padding =
+        48;
+
+    const targetWidth =
+        Math.max(
+            rect.width -
+            padding * 2,
+            1
+        );
+
+    const targetHeight =
+        Math.max(
+            rect.height -
+            padding * 2,
+            1
+        );
+
+    const axisLengthPx =
+        axisLength();
 
     zoomMode = "fit";
-
     zoom =
         Math.min(
-            scaleX,
-            scaleY
-        ) * .9;
+            targetWidth / axisLengthPx,
+            targetHeight / axisLengthPx
+        );
 
+    const midpointX =
+        (axis.x1 + axis.x2) / 2;
+
+    const midpointY =
+        (axis.y1 + axis.y2) / 2;
 
     offsetX =
-        (
-            rect.width -
-            imageWidth * zoom
-        ) / 2;
-
+        rect.width / 2 -
+        midpointX * zoom;
 
     offsetY =
-        (
-            rect.height -
-            imageHeight * zoom
-        ) / 2;
-
+        rect.height / 2 -
+        midpointY * zoom;
 
     updateZoomLabel();
-
     draw();
 }
 
