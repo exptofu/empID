@@ -575,6 +575,17 @@ canvas.dragging {
         1.55;
 }
 
+#instructionBody a,
+#instructionBody a:visited {
+    color: #9ad1ff;
+    text-decoration: underline;
+}
+
+#instructionBody a:hover,
+#instructionBody a:focus-visible {
+    color: #dfeeff;
+}
+
 
 /* =========================================================
    Sidebar

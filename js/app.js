@@ -61,7 +61,7 @@ const instructionsToggle =
 
 const instructionMessages = {
     launch:
-        "Load an image to begin. All processing is local and never leaves your device",
+        'Load an image or <a href="sample-empid-session.json" id="sampleEmpidLink">sample empid</a> to begin. All processing is local and never leaves your device',
     imageLoaded:
         "Select the Primary Axis button to align measurements",
     axis:
@@ -283,7 +283,7 @@ function canvasToDataUrl() {
         capture.height
     );
 
-    return capture.toDataURL("image/png");
+    return capture.toDataURL("image/jpeg", 0.85);
 }
 
 async function getAllSessions() {
@@ -1833,11 +1833,74 @@ function setMode(
 }
 
 
+instructionBody.addEventListener(
+    "click",
+    async (event) => {
+        const sampleLink =
+            event.target.closest("#sampleEmpidLink");
+
+        if (!sampleLink)
+            return;
+
+        event.preventDefault();
+        await loadSampleEmpidSession();
+    }
+);
+
 function setInstruction(
     message
 ) {
-    instructionBody.textContent =
+    const content =
         instructionMessages[message];
+
+    if (!content)
+        return;
+
+    if (message === "launch") {
+        instructionBody.innerHTML = content;
+        return;
+    }
+
+    instructionBody.textContent =
+        content;
+}
+
+async function loadSampleEmpidSession() {
+    try {
+        const response =
+            await fetch("sample-empid-session.json");
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const parsed =
+            await response.json();
+
+        const sessions =
+            Array.isArray(parsed)
+                ? parsed
+                : Array.isArray(parsed?.sessions)
+                    ? parsed.sessions
+                    : [parsed];
+
+        const target =
+            sessions.find(session => session && session.image && session.image.dataUrl) || sessions[0];
+
+        if (!target) {
+            status.textContent =
+                "The sample empid data could not be loaded.";
+            return;
+        }
+
+        applySavedSession(target);
+        status.textContent =
+            `Loaded sample empid "${target.name || "Untitled"}".`;
+    } catch (error) {
+        console.error("Failed to load sample empid session:", error);
+        status.textContent =
+            "Could not load the sample empid.";
+    }
 }
 
 
