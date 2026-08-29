@@ -14,6 +14,12 @@ const ctx =
 const fileInput =
     document.getElementById("fileInput");
 
+const saveSessionBtn =
+    document.getElementById("saveSessionBtn");
+
+const loadSessionBtn =
+    document.getElementById("loadSessionBtn");
+
 const openImageBtn =
     document.getElementById("openImageBtn");
 
@@ -168,6 +174,415 @@ let panStart =
 let panOrigin =
     null;
 
+const SESSION_LIST_KEY =
+    "empid-saved-sessions";
+
+const LEGACY_SESSION_KEY =
+    "empid-current-session";
+
+const sessionStore =
+    window.localforage
+        ? localforage.createInstance({
+            name: "empID",
+            storeName: "sessions"
+        })
+        : null;
+
+const fallbackSessionStore = {
+    async getItem(key) {
+        try {
+            const raw =
+                localStorage.getItem(key);
+
+            return raw
+                ? JSON.parse(raw)
+                : null;
+        } catch (error) {
+            console.error("Fallback session read failed:", error);
+            return null;
+        }
+    },
+
+    async setItem(key, value) {
+        try {
+            localStorage.setItem(
+                key,
+                JSON.stringify(value)
+            );
+            return value;
+        } catch (error) {
+            console.error("Fallback session write failed:", error);
+            throw error;
+        }
+    }
+};
+
+function getSessionStore() {
+    return sessionStore || fallbackSessionStore;
+}
+
+function defaultSessionName() {
+    const timestamp =
+        new Date()
+            .toISOString()
+            .replace(/[:.]/g, "-");
+
+    return `Session ${timestamp}`;
+}
+
+function getCurrentSessionSnapshot() {
+    return {
+        version: 1,
+        savedAt: new Date().toISOString(),
+        mode,
+        zoom,
+        offsetX,
+        offsetY,
+        image: imageLoaded && image && image.src
+            ? {
+                dataUrl: image.src.startsWith("data:")
+                    ? image.src
+                    : canvasToDataUrl(),
+                width: imageWidth,
+                height: imageHeight
+            }
+            : null,
+        axis: axis ? { ...axis } : null,
+        secondaryTip: secondaryTip ? { ...secondaryTip } : null,
+        featherTips: featherTips.map(feather => ({ ...feather })),
+        measurements: measurements.map(measurement => ({ ...measurement })),
+        currentMeasurement: currentMeasurement ? { ...currentMeasurement } : null,
+        pendingFeather: pendingFeather ? { ...pendingFeather } : null
+    };
+}
+
+function canvasToDataUrl() {
+    const capture =
+        document.createElement("canvas");
+
+    capture.width = imageWidth || image.naturalWidth || 0;
+    capture.height = imageHeight || image.naturalHeight || 0;
+
+    if (!capture.width || !capture.height)
+        return "";
+
+    const captureCtx =
+        capture.getContext("2d");
+
+    captureCtx.drawImage(
+        image,
+        0,
+        0,
+        capture.width,
+        capture.height
+    );
+
+    return capture.toDataURL("image/png");
+}
+
+async function getAllSessions() {
+    const store =
+        getSessionStore();
+
+    let sessions =
+        await store.getItem(SESSION_LIST_KEY);
+
+    if (!Array.isArray(sessions)) {
+        const legacy =
+            await store.getItem(LEGACY_SESSION_KEY);
+
+        if (legacy) {
+            sessions = [{
+                id: legacy.id || `legacy-${Date.now()}`,
+                name: legacy.name || defaultSessionName(),
+                ...legacy
+            }];
+
+            await store.setItem(
+                SESSION_LIST_KEY,
+                sessions
+            );
+        }
+    }
+
+    if (!Array.isArray(sessions))
+        return [];
+
+    return sessions
+        .filter(Boolean)
+        .sort(
+            (a, b) =>
+                new Date(b.savedAt || 0) -
+                new Date(a.savedAt || 0)
+        );
+}
+
+async function saveSession() {
+    if (!imageLoaded || !image) {
+        status.textContent =
+            "Load an image before saving a session.";
+        return;
+    }
+
+    const suggestedName =
+        defaultSessionName();
+
+    const enteredName =
+        window.prompt(
+            "Name this session:",
+            suggestedName
+        );
+
+    if (enteredName === null)
+        return;
+
+    const name =
+        (enteredName || suggestedName).trim() || suggestedName;
+
+    const snapshot =
+        getCurrentSessionSnapshot();
+
+    const sessionEntry = {
+        ...snapshot,
+        id: `session-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        name,
+        savedAt: snapshot.savedAt || new Date().toISOString()
+    };
+
+    try {
+        const sessions =
+            await getAllSessions();
+
+        sessions.unshift(sessionEntry);
+
+        await getSessionStore().setItem(
+            SESSION_LIST_KEY,
+            sessions
+        );
+
+        status.textContent =
+            `Saved session "${name}".`;
+    } catch (error) {
+        console.error("Failed to save session:", error);
+        status.textContent =
+            "Could not save the session.";
+    }
+}
+
+function openSessionModal() {
+    const modal =
+        document.getElementById("sessionModal");
+
+    if (!modal)
+        return;
+
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+}
+
+function closeSessionModal() {
+    const modal =
+        document.getElementById("sessionModal");
+
+    if (!modal)
+        return;
+
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+async function renderSessionList() {
+    const sessionList =
+        document.getElementById("sessionList");
+
+    if (!sessionList)
+        return;
+
+    const sessions =
+        await getAllSessions();
+
+    if (!sessions.length) {
+        sessionList.innerHTML =
+            '<div class="empty-sessions">No saved sessions yet.</div>';
+        return;
+    }
+
+    sessionList.innerHTML =
+        sessions.map(
+            session => `
+                <div class="session-item">
+                    <div class="session-meta">
+                        <span class="session-name">${session.name || "Unnamed session"}</span>
+                        <span class="session-timestamp">${new Date(session.savedAt || Date.now()).toLocaleString()}</span>
+                    </div>
+                    <div class="session-actions">
+                        <button class="session-load" type="button" data-action="load-session" data-id="${session.id}">Load</button>
+                        <button class="session-delete" type="button" data-action="delete-session" data-id="${session.id}">Delete</button>
+                    </div>
+                </div>
+            `
+        ).join("");
+}
+
+async function loadSavedSession() {
+    try {
+        const sessions =
+            await getAllSessions();
+
+        if (!sessions.length) {
+            status.textContent =
+                "No saved sessions were found.";
+            return;
+        }
+
+        await renderSessionList();
+        openSessionModal();
+    } catch (error) {
+        console.error("Failed to load session list:", error);
+        status.textContent =
+            "Could not open the saved sessions list.";
+    }
+}
+
+async function loadSessionById(id) {
+    const sessions =
+        await getAllSessions();
+
+    const target =
+        sessions.find(session => session.id === id);
+
+    if (!target || !target.image || !target.image.dataUrl) {
+        status.textContent =
+            "The selected saved session could not be found.";
+        return;
+    }
+
+    applySavedSession(target);
+    closeSessionModal();
+}
+
+async function deleteSession(id) {
+    const sessions =
+        await getAllSessions();
+
+    const remaining =
+        sessions.filter(session => session.id !== id);
+
+    await getSessionStore().setItem(
+        SESSION_LIST_KEY,
+        remaining
+    );
+
+    await renderSessionList();
+    status.textContent =
+        "Saved session deleted.";
+}
+
+function applySavedSession(snapshot) {
+    const nextImage =
+        new Image();
+
+    nextImage.onload = () => {
+        image = nextImage;
+        imageLoaded = true;
+        imageWidth = snapshot.image.width || nextImage.naturalWidth || imageWidth;
+        imageHeight = snapshot.image.height || nextImage.naturalHeight || imageHeight;
+
+        axis = snapshot.axis ? { ...snapshot.axis } : null;
+        secondaryTip = snapshot.secondaryTip ? { ...snapshot.secondaryTip } : null;
+        featherTips = Array.isArray(snapshot.featherTips)
+            ? snapshot.featherTips.map(feather => ({ ...feather }))
+            : [];
+        measurements = Array.isArray(snapshot.measurements)
+            ? snapshot.measurements.map(measurement => ({ ...measurement }))
+            : [];
+        currentMeasurement = snapshot.currentMeasurement
+            ? { ...snapshot.currentMeasurement }
+            : null;
+        pendingFeather = snapshot.pendingFeather
+            ? { ...snapshot.pendingFeather }
+            : null;
+
+        zoom = Number.isFinite(snapshot.zoom)
+            ? clamp(snapshot.zoom, .05, 20)
+            : 1;
+
+        offsetX = Number.isFinite(snapshot.offsetX)
+            ? snapshot.offsetX
+            : 0;
+
+        offsetY = Number.isFinite(snapshot.offsetY)
+            ? snapshot.offsetY
+            : 0;
+
+        mode = snapshot.mode || "pan";
+
+        updateMeasurements();
+        updateZoomLabel();
+        setMode(mode);
+        draw();
+
+        status.textContent =
+            snapshot.savedAt
+                ? `Loaded saved session "${snapshot.name || "Untitled"}" from ${new Date(snapshot.savedAt).toLocaleString()}.`
+                : "Loaded saved session.";
+    };
+
+    nextImage.src = snapshot.image.dataUrl;
+}
+
+saveSessionBtn.addEventListener(
+    "click",
+    saveSession
+);
+
+loadSessionBtn.addEventListener(
+    "click",
+    loadSavedSession
+);
+
+document.addEventListener(
+    "click",
+    async event => {
+        const target =
+            event.target.closest("[data-action]");
+
+        if (!target)
+            return;
+
+        const action =
+            target.getAttribute("data-action");
+
+        if (action === "close-session-modal") {
+            closeSessionModal();
+            return;
+        }
+
+        if (action === "load-session") {
+            const sessionId =
+                target.getAttribute("data-id");
+
+            await loadSessionById(sessionId);
+            return;
+        }
+
+        if (action === "delete-session") {
+            const sessionId =
+                target.getAttribute("data-id");
+
+            if (sessionId) {
+                const confirmed =
+                    window.confirm(
+                        "Delete this saved session?"
+                    );
+
+                if (confirmed) {
+                    await deleteSession(sessionId);
+                }
+            }
+        }
+    }
+);
 
 // ============================================================
 // Resize
