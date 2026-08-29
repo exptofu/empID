@@ -1404,7 +1404,7 @@ function drawFeatherTips() {
 function drawMeasurements() {
 
     measurements.forEach(
-        measurement => {
+        (measurement, index) => {
 
             const a =
                 imageToScreen(
@@ -1467,10 +1467,19 @@ function drawMeasurements() {
                 );
 
 
+            const midX =
+                (a.x + b.x) / 2;
+
+            const midY =
+                (a.y + b.y) / 2;
+
+            const label =
+                `M${index + 1}: ${length.toFixed(1)} px`;
+
             drawLabel(
-                (a.x + b.x) / 2,
-                (a.y + b.y) / 2 - 8,
-                `${length.toFixed(1)} px`,
+                midX,
+                midY - 8,
+                label,
                 "#ffe066"
             );
 
@@ -2027,6 +2036,90 @@ function findDraggableObject(
     }
 
 
+    for (
+        let i =
+            measurements.length - 1;
+
+        i >= 0;
+
+        i--
+    ) {
+
+        const measurement =
+            measurements[i];
+
+        const start =
+            imageToScreen(
+                measurement.x1,
+                measurement.y1
+            );
+
+        const end =
+            imageToScreen(
+                measurement.x2,
+                measurement.y2
+            );
+
+        if (
+            Math.hypot(
+                start.x - sx,
+                start.y - sy
+            ) <= 15
+        ) {
+
+            return {
+
+                type:
+                    "measurementStart",
+
+                index:
+                    i
+            };
+        }
+
+        if (
+            Math.hypot(
+                end.x - sx,
+                end.y - sy
+            ) <= 15
+        ) {
+
+            return {
+
+                type:
+                    "measurementEnd",
+
+                index:
+                    i
+            };
+        }
+
+        const measurementDistance =
+            distanceToSegment(
+                sx,
+                sy,
+                start.x,
+                start.y,
+                end.x,
+                end.y
+            );
+
+        if (
+            measurementDistance <= 14
+        ) {
+
+            return {
+
+                type:
+                    "measurementLine",
+
+                index:
+                    i
+            };
+        }
+    }
+
+
     return null;
 }
 
@@ -2179,6 +2272,24 @@ canvas.addEventListener(
                     y1: axis.y1,
                     x2: axis.x2,
                     y2: axis.y2
+                };
+
+                dragObject.startPoint = {
+                    x: point.x,
+                    y: point.y
+                };
+            }
+
+            if (
+                hit.type ===
+                "measurementLine"
+            ) {
+
+                dragObject.initialMeasurement = {
+                    x1: measurements[hit.index].x1,
+                    y1: measurements[hit.index].y1,
+                    x2: measurements[hit.index].x2,
+                    y2: measurements[hit.index].y2
                 };
 
                 dragObject.startPoint = {
@@ -2659,13 +2770,20 @@ function finishMouseAction(event) {
             measurements.push(
                 currentMeasurement
             );
+
+            currentMeasurement =
+                null;
+
+            updateMeasurements();
+
+            setMode("pan");
+        } else {
+
+            currentMeasurement =
+                null;
+
+            updateMeasurements();
         }
-
-
-        currentMeasurement =
-            null;
-
-        updateMeasurements();
     }
 
 
@@ -2809,6 +2927,105 @@ function updateDraggedObject(
             point.x;
 
         axis.y2 =
+            point.y;
+
+        return;
+    }
+
+
+    /*
+        Generic measurement line.
+    */
+
+    if (
+        dragObject.type ===
+        "measurementLine"
+    ) {
+
+        const measurement =
+            measurements[
+                dragObject.index
+            ];
+
+        if (!measurement)
+            return;
+
+        const dx =
+            point.x -
+            dragObject.startPoint.x;
+
+        const dy =
+            point.y -
+            dragObject.startPoint.y;
+
+        measurement.x1 =
+            dragObject.initialMeasurement.x1 +
+            dx;
+
+        measurement.y1 =
+            dragObject.initialMeasurement.y1 +
+            dy;
+
+        measurement.x2 =
+            dragObject.initialMeasurement.x2 +
+            dx;
+
+        measurement.y2 =
+            dragObject.initialMeasurement.y2 +
+            dy;
+
+        return;
+    }
+
+
+    /*
+        Generic measurement start.
+    */
+
+    if (
+        dragObject.type ===
+        "measurementStart"
+    ) {
+
+        const measurement =
+            measurements[
+                dragObject.index
+            ];
+
+        if (!measurement)
+            return;
+
+        measurement.x1 =
+            point.x;
+
+        measurement.y1 =
+            point.y;
+
+        return;
+    }
+
+
+    /*
+        Generic measurement end.
+    */
+
+    if (
+        dragObject.type ===
+        "measurementEnd"
+    ) {
+
+        const measurement =
+            measurements[
+                dragObject.index
+            ];
+
+        if (!measurement)
+            return;
+
+        measurement.x2 =
+            point.x;
+
+        measurement.y2 =
             point.y;
 
         return;
