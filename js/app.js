@@ -556,6 +556,11 @@ function applySavedSession(snapshot) {
         if (wantsFitZoom) {
             zoomMode = "fit";
             zoom = 1;
+        } else if (snapshot.zoomMode === "fill") {
+            zoomMode = "fill";
+            zoom = Number.isFinite(snapshot.zoom)
+                ? clamp(snapshot.zoom, .05, 20)
+                : 1;
         } else {
             zoomMode = "manual";
             zoom = Number.isFinite(snapshot.zoom)
@@ -573,9 +578,14 @@ function applySavedSession(snapshot) {
 
         mode = snapshot.mode || "pan";
 
-        if (wantsFitZoom) {
+        if (wantsFitZoom || snapshot.zoomMode === "fit") {
             fitImage();
             setMode(mode);
+        } else if (snapshot.zoomMode === "fill") {
+            zoomMode = "fill";
+            updateZoomLabel();
+            setMode(mode);
+            draw();
         } else {
             updateMeasurements();
             updateZoomLabel();
