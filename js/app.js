@@ -97,6 +97,9 @@ let imageHeight =
 let zoom =
     1;
 
+let zoomMode =
+    "manual";
+
 let offsetX =
     0;
 
@@ -547,9 +550,18 @@ function applySavedSession(snapshot) {
             ? { ...snapshot.pendingFeather }
             : null;
 
-        zoom = Number.isFinite(snapshot.zoom)
-            ? clamp(snapshot.zoom, .05, 20)
-            : 1;
+        const wantsFitZoom =
+            snapshot.zoomMode === "fit" || snapshot.fit === true;
+
+        if (wantsFitZoom) {
+            zoomMode = "fit";
+            zoom = 1;
+        } else {
+            zoomMode = "manual";
+            zoom = Number.isFinite(snapshot.zoom)
+                ? clamp(snapshot.zoom, .05, 20)
+                : 1;
+        }
 
         offsetX = Number.isFinite(snapshot.offsetX)
             ? snapshot.offsetX
@@ -561,10 +573,14 @@ function applySavedSession(snapshot) {
 
         mode = snapshot.mode || "pan";
 
-        updateMeasurements();
-        updateZoomLabel();
-        setMode(mode);
-        draw();
+        if (wantsFitZoom) {
+            fitImage();
+        } else {
+            updateMeasurements();
+            updateZoomLabel();
+            setMode(mode);
+            draw();
+        }
 
         status.textContent =
             snapshot.savedAt
@@ -3224,6 +3240,8 @@ function setZoom(
     newZoom
 ) {
 
+    zoomMode = "manual";
+
     const rect =
         canvas.getBoundingClientRect();
 
@@ -3296,6 +3314,12 @@ document.getElementById(
 
 function updateZoomLabel() {
 
+    if (zoomMode === "fit") {
+        zoomLabel.textContent =
+            "Fit";
+        return;
+    }
+
     zoomLabel.textContent =
         `${Math.round(zoom * 100)}%`;
 }
@@ -3323,6 +3347,8 @@ function fitImage() {
         rect.height /
         imageHeight;
 
+
+    zoomMode = "fit";
 
     zoom =
         Math.min(
