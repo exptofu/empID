@@ -41,6 +41,12 @@ const zoomLabel =
 const measurementsDiv =
     document.getElementById("measurements");
 
+const sidebar =
+    document.getElementById("sidebar");
+
+const measurementsToggle =
+    document.getElementById("measurementsToggle");
+
 const status =
     document.getElementById("status");
 
@@ -3505,15 +3511,65 @@ instructionsToggle.addEventListener(
             String(!isExpanded)
         );
 
+        instructions.classList.toggle(
+            "collapsed",
+            isExpanded
+        );
+
         instructionBody.classList.toggle(
             "hidden",
             isExpanded
         );
 
         instructionsToggle.textContent =
+            isExpanded ? "Expand Help" : "Collapse";
+    }
+);
+
+function syncMeasurementsPanelState() {
+    const shouldCollapse =
+        window.matchMedia("(max-width: 700px)").matches;
+
+    sidebar.classList.toggle(
+        "collapsed",
+        shouldCollapse
+    );
+
+    measurementsToggle.setAttribute(
+        "aria-expanded",
+        String(!shouldCollapse)
+    );
+
+    measurementsToggle.textContent =
+        shouldCollapse ? "Expand" : "Collapse";
+}
+
+measurementsToggle.addEventListener(
+    "click",
+    () => {
+        const isExpanded =
+            measurementsToggle.getAttribute("aria-expanded") === "true";
+
+        measurementsToggle.setAttribute(
+            "aria-expanded",
+            String(!isExpanded)
+        );
+
+        sidebar.classList.toggle(
+            "collapsed",
+            isExpanded
+        );
+
+        measurementsToggle.textContent =
             isExpanded ? "Expand" : "Collapse";
     }
 );
 
+window.addEventListener(
+    "resize",
+    syncMeasurementsPanelState
+);
+
+syncMeasurementsPanelState();
 
 updateWorkflowHighlight();

@@ -161,20 +161,20 @@ button.suggested,
         rgba(255, 255, 255, 0.04);
 
     border-color:
-        #a7b0b8;
+        #8fc8ff;
 
     color:
         #f2f5f7;
 
     box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.16),
-        0 0 10px rgba(255, 255, 255, 0.22);
+        0 0 0 1px rgba(120, 185, 255, 0.45),
+        0 0 10px rgba(77, 157, 255, 0.55);
 }
 
 button.suggested > div,
 .file-button.suggested > div {
     filter:
-        drop-shadow(0 0 6px rgba(255, 255, 255, 0.7));
+        drop-shadow(0 0 6px rgba(100, 170, 255, 0.8));
 }
 
 .separator {
@@ -451,6 +451,40 @@ canvas.dragging {
         auto;
 }
 
+#instructions.collapsed {
+
+    width:
+        fit-content;
+
+    max-width:
+        min(260px, calc(100vw - 24px));
+
+    left:
+        auto;
+
+    right:
+        12px;
+
+    padding:
+        10px 12px;
+}
+
+#instructions.collapsed .instructions-header {
+
+    justify-content:
+        flex-end;
+
+    margin-bottom:
+        0;
+}
+
+#instructions.collapsed .instructions-header strong,
+#instructions.collapsed #instructionBody {
+
+    display:
+        none;
+}
+
 .instructions-header {
 
     display:
@@ -531,13 +565,64 @@ canvas.dragging {
         12px;
 }
 
+.sidebar-header {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    gap:
+        12px;
+
+    margin-bottom:
+        8px;
+}
+
 #sidebar h3 {
 
     margin:
-        0 0 8px;
+        0;
 
     font-size:
         15px;
+}
+
+#measurementsToggle {
+
+    flex-shrink:
+        0;
+
+    padding:
+        4px 8px;
+
+    font-size:
+        11px;
+}
+
+#sidebar.collapsed {
+
+    width:
+        auto;
+
+    max-height:
+        none;
+}
+
+#sidebar.collapsed .sidebar-header {
+
+    margin-bottom:
+        0;
+}
+
+#sidebar.collapsed #measurements {
+
+    display:
+        none;
 }
 
 .section {
@@ -745,6 +830,14 @@ button.delete > span,
         overflow-y: auto;
     }
 
+    #instructions.collapsed {
+        left: auto;
+        right: 6px;
+        width: fit-content;
+        max-width: calc(100vw - 18px);
+        padding: 8px 10px;
+    }
+
     .instructions-header {
         margin-bottom: 7px;
     }
@@ -761,9 +854,14 @@ button.delete > span,
         border-radius: 5px;
     }
 
+    #sidebar.collapsed {
+        max-height: none;
+        padding: 8px 10px;
+    }
+
     #sidebar h3 {
         font-size: 15px;
-        margin-bottom: 4px;
+        margin-bottom: 0;
     }
 
     .section {
