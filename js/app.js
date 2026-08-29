@@ -323,6 +323,41 @@ async function getAllSessions() {
         );
 }
 
+function openSaveSessionModal() {
+    const modal =
+        document.getElementById("saveSessionModal");
+
+    const input =
+        document.getElementById("saveSessionNameInput");
+
+    if (!modal || !input)
+        return;
+
+    const suggestedName =
+        defaultSessionName();
+
+    input.value = suggestedName;
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+
+    requestAnimationFrame(() => {
+        input.focus();
+        input.select();
+        input.setSelectionRange(0, input.value.length);
+    });
+}
+
+function closeSaveSessionModal() {
+    const modal =
+        document.getElementById("saveSessionModal");
+
+    if (!modal)
+        return;
+
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+}
+
 async function saveSession() {
     if (!imageLoaded || !image) {
         status.textContent =
@@ -330,20 +365,23 @@ async function saveSession() {
         return;
     }
 
+    openSaveSessionModal();
+}
+
+async function confirmSaveSession() {
+    const input =
+        document.getElementById("saveSessionNameInput");
+
+    if (!input)
+        return;
+
     const suggestedName =
         defaultSessionName();
 
-    const enteredName =
-        window.prompt(
-            "Name this session:",
-            suggestedName
-        );
-
-    if (enteredName === null)
-        return;
-
     const name =
-        (enteredName || suggestedName).trim() || suggestedName;
+        (input.value || suggestedName).trim() || suggestedName;
+
+    closeSaveSessionModal();
 
     const snapshot =
         getCurrentSessionSnapshot();
@@ -558,6 +596,16 @@ document.addEventListener(
 
         const action =
             target.getAttribute("data-action");
+
+        if (action === "close-save-session-modal") {
+            closeSaveSessionModal();
+            return;
+        }
+
+        if (action === "confirm-save-session") {
+            await confirmSaveSession();
+            return;
+        }
 
         if (action === "close-session-modal") {
             closeSessionModal();

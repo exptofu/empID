@@ -250,6 +250,60 @@ input[type=file] {
     font-size: 12px;
 }
 
+.save-session-form {
+    padding: 16px;
+}
+
+.save-session-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #f3f3f3;
+}
+
+.save-session-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #5f5f5f;
+    border-radius: 6px;
+    background: #111;
+    color: #fff;
+    font-size: 14px;
+}
+
+.save-session-input:focus {
+    outline: 2px solid #7bb7ff;
+    outline-offset: 1px;
+}
+
+.save-session-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.primary-button,
+.secondary-button {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.primary-button {
+    background: #2d7bf6;
+    border: 1px solid #2d7bf6;
+    color: #fff;
+}
+
+.secondary-button {
+    background: transparent;
+    border: 1px solid #5f5f5f;
+    color: #f3f3f3;
+}
+
 .session-list {
     max-height: 60vh;
     overflow-y: auto;
