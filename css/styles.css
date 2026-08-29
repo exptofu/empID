@@ -14,8 +14,8 @@ body {
         Helvetica,
         sans-serif;
 
-    background: #171717;
-    color: #eee;
+    background: #121212;
+    color: #f2f2f2;
 }
 
 #app {
@@ -43,10 +43,10 @@ body {
 
     padding: 7px 10px;
 
-    background: #252525;
+    background: #2a2a2a;
 
     border-bottom:
-        1px solid #444;
+        1px solid #6f6f6f;
 
     z-index: 20;
 }
@@ -70,13 +70,13 @@ button,
         4px;
 
     border:
-        1px solid #555;
+        1px solid #8d8d8d;
 
     background:
-        #333;
+        #3f3f3f;
 
     color:
-        #eee;
+        #f5f5f5;
 
     padding:
         7px 11px;
@@ -98,7 +98,19 @@ button:hover,
 .file-button:hover {
 
     background:
-        #444;
+        #545454;
+}
+
+button:focus-visible,
+.file-button:focus-visible,
+button.delete:focus-visible,
+.delete:focus-visible,
+#instructionsToggle:focus-visible {
+    outline:
+        3px solid #9ad1ff;
+
+    outline-offset:
+        2px;
 }
 
 button > div,
@@ -133,23 +145,36 @@ button > span,
 button.current {
 
     background:
-        #fff;
+        #0f5fb7;
 
     border-color:
-        #fff;
+        #8fc8ff;
 
     color:
-        #111;
+        #f4faff;
 }
 
 button.suggested,
 .file-button.suggested {
 
     background:
-        #1264a3;
+        rgba(255, 255, 255, 0.04);
 
     border-color:
-        #4ba3e3;
+        #a7b0b8;
+
+    color:
+        #f2f5f7;
+
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.16),
+        0 0 10px rgba(255, 255, 255, 0.22);
+}
+
+button.suggested > div,
+.file-button.suggested > div {
+    filter:
+        drop-shadow(0 0 6px rgba(255, 255, 255, 0.7));
 }
 
 .separator {
@@ -185,6 +210,9 @@ input[type=file] {
 
     font-size:
         13px;
+
+    color:
+        #f5f5f5;
 }
 
 
@@ -292,7 +320,7 @@ canvas.dragging {
         14px 16px;
 
     background:
-        rgba(0,0,0,.80);
+        rgba(10,10,10,.88);
 
     border-radius:
         5px;
@@ -302,6 +330,9 @@ canvas.dragging {
 
     line-height:
         1.5;
+
+    color:
+        #f2f2f2;
 
     pointer-events:
         auto;
@@ -372,10 +403,10 @@ canvas.dragging {
         12px;
 
     background:
-        rgba(25,25,25,.95);
+        rgba(18,18,18,.97);
 
     border:
-        1px solid #555;
+        1px solid #666;
 
     border-radius:
         6px;
@@ -428,7 +459,7 @@ canvas.dragging {
 .small {
 
     color:
-        #aaa;
+        #d7d7d7;
 
     font-size:
         11px;
@@ -476,13 +507,13 @@ button.delete,
         1;
 
     background:
-        transparent;
+        #2d2d2d;
 
     border:
-        1px solid #666;
+        1px solid #8d8d8d;
 
     color:
-        #eee;
+        #f5f5f5;
 }
 
 button.delete > div,
@@ -506,7 +537,7 @@ button.delete > span,
 .info {
 
     color:
-        #aaa;
+        #d6d6d6;
 
     line-height:
         1.45;
@@ -532,7 +563,7 @@ button.delete > span,
         7px 10px;
 
     background:
-        rgba(0,0,0,.75);
+        rgba(0,0,0,.85);
 
     border-radius:
         4px;
@@ -541,7 +572,7 @@ button.delete > span,
         12px;
 
     color:
-        #ddd;
+        #f0f0f0;
 
     pointer-events:
         none;
@@ -613,12 +644,12 @@ button.delete > span,
         width: auto;
         max-height: 34vh;
         padding: 8px;
-        font-size: 11px;
+        font-size: 13px;
         border-radius: 5px;
     }
 
     #sidebar h3 {
-        font-size: 13px;
+        font-size: 15px;
         margin-bottom: 4px;
     }
 
@@ -628,7 +659,16 @@ button.delete > span,
     }
 
     .measurement {
-        padding: 4px 0;
+        padding: 5px 0;
+        font-size: 13px;
+    }
+
+    .measurement strong {
+        font-size: 13px;
+    }
+
+    .small {
+        font-size: 12px;
     }
 
     #measurements {
