@@ -460,10 +460,10 @@ canvas.dragging {
         min(260px, calc(100vw - 24px));
 
     left:
-        auto;
+        12px;
 
     right:
-        12px;
+        auto;
 
     padding:
         10px 12px;
