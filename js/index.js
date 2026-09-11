@@ -1,37 +1,12 @@
 "use strict";
 
-/* Categorical field marks stay separate from measurements so numeric data can grow safely. */
-const species = [
-    {"name":"Yellow-bellied","code":"YBFL","traits":{"eye-ring":"bold, crisp","lower mandible":"all pale","bill size":"medium","tail length":"medium","primary extension":"long","tail width":"narrow","crown shape":"round","forehead angle":"medium","underpart/upperpart contrast":"weak","wingbar contrast":"strong","wing panel contrast":"strong","p6 emargination":"emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
-    {"name":"Western","code":"WEFL","traits":{"eye-ring":"tear-shaped","lower mandible":"all pale","bill size":"medium","tail length":"medium","primary extension":["medium","long"],"tail width":"narrow","crown shape":["peaked","crested"],"forehead angle":"medium","underpart/upperpart contrast":"weak","wingbar contrast":"medium","wing panel contrast":"medium","p6 emargination":"emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
-    {"name":"Dusky","code":"DUSK","traits":{"eye-ring":"messy","lower mandible":["all dark","partial"],"bill size":["small","medium"],"tail length":["medium","long"],"primary extension":["short","medium"],"tail width":"narrow","crown shape":["round","peaked","flat"],"forehead angle":"medium","underpart/upperpart contrast":["medium","weak"],"wingbar contrast":"medium","wing panel contrast":["medium","weak"],"p6 emargination":"emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
-    {"name":"Hammond's","code":"HAFL","traits":{"eye-ring":["none","thin, distinct","messy"],"lower mandible":["all dark","partial"],"bill size":"small","tail length":["short","medium"],"primary extension":"long","tail width":"narrow","crown shape":["round","peaked","flat"],"forehead angle":"steep","underpart/upperpart contrast":"weak","wingbar contrast":"medium","wing panel contrast":["medium","weak"],"p6 emargination":"emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
-    {"name":"Least","code":"LEFL","traits":{"eye-ring":["thin, distinct","messy","bold, crisp"],"lower mandible":["partial","all pale"],"bill size":["small","medium"],"tail length":["short","medium"],"primary extension":["short","medium"],"tail width":"narrow","crown shape":["round","peaked","flat"],"forehead angle":"medium","underpart/upperpart contrast":["strong","medium"],"wingbar contrast":"strong","wing panel contrast":"strong","p6 emargination":"emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
-    {"name":"Alder","code":"ALFL","traits":{"eye-ring":["none","thin, distinct"],"lower mandible":"all pale","bill size":"medium","tail length":"medium","primary extension":"medium","tail width":"medium","crown shape":"round","forehead angle":"medium","underpart/upperpart contrast":["strong","medium"],"wingbar contrast":"medium","wing panel contrast":"medium","p6 emargination":"not emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
-    {"name":"Acadian","code":"ACFL","traits":{"eye-ring":"bold, crisp","lower mandible":"all pale","bill size":"long","tail length":"medium","primary extension":"long","tail width":"fat","crown shape":"peaked","forehead angle":"shallow","underpart/upperpart contrast":"strong","wingbar contrast":"strong","wing panel contrast":"medium","p6 emargination":"not emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
-    {"name":"Willow","code":"WIFL","traits":{"eye-ring":["none","thin, distinct"],"lower mandible":"all pale","bill size":"medium","tail length":"medium","primary extension":"medium","tail width":"medium","crown shape":"peaked","forehead angle":"medium","underpart/upperpart contrast":"medium","wingbar contrast":"medium","wing panel contrast":"weak","p6 emargination":"not emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
-    {"name":"Gray","code":"GRFL","traits":{"eye-ring":"messy","lower mandible":"all pale","bill size":"long","tail length":"long","primary extension":["short","medium"],"tail width":"narrow","crown shape":"flat","forehead angle":"medium","underpart/upperpart contrast":"weak","wingbar contrast":"weak","wing panel contrast":"weak","p6 emargination":"emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
-    {"name":"Western Wood-Pewee","code":"WWPE","traits":{"eye-ring":"none","lower mandible":["all dark","partial"],"bill size":"long","tail length":"medium","primary extension":"long","crown shape":["peaked","crested"],"forehead angle":["shallow","medium"],"underpart/upperpart contrast":"weak","wingbar contrast":"weak","wing panel contrast":"weak","p6 emargination":"not emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
-    {"name":"Eastern Wood-Pewee","code":"EAWP","traits":{"eye-ring":["none","thin, distinct"],"lower mandible":["all dark","partial"],"bill size":"long","tail length":"medium","primary extension":"long","crown shape":["peaked","crested"],"forehead angle":["shallow","medium"],"underpart/upperpart contrast":["medium","weak"],"wingbar contrast":["medium","weak"],"wing panel contrast":"weak","p6 emargination":"not emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
-];
-
-const questionOrder = ["eye-ring", "lower mandible", "bill size", "tail length", "primary extension", "tail width", "crown shape", "forehead angle", "underpart/upperpart contrast", "wingbar contrast", "wing panel contrast", "p6 emargination"];
-const questionLabels = { "eye-ring": "Eye-ring", "lower mandible": "Lower mandible", "bill size": "Bill size", "tail length": "Tail length", "primary extension": "Primary extension", "tail width": "Tail width", "crown shape": "Crown shape", "forehead angle": "Forehead angle", "underpart/upperpart contrast": "Underpart / upperpart contrast", "wingbar contrast": "Wingbar contrast", "wing panel contrast": "Wing panel contrast", "p6 emargination": "P6 emargination" };
-const traitWeights = { "p6 emargination": 3 };
-const traitValueOrder = {
-    "eye-ring": ["none", "thin, distinct", "messy", "bold, crisp", "tear-shaped"],
-    "lower mandible": ["all dark", "partial", "all pale"],
-    "bill size": ["small", "medium", "long"],
-    "tail length": ["short", "medium", "long"],
-    "primary extension": ["short", "medium", "long"],
-    "tail width": ["fat", "medium", "narrow"],
-    "crown shape": ["round", "peaked", "flat", "crested"],
-    "forehead angle": ["shallow", "medium", "steep"],
-    "underpart/upperpart contrast": ["strong", "medium", "weak"],
-    "wingbar contrast": ["strong", "medium", "weak"],
-    "wing panel contrast": ["strong", "medium", "weak"],
-    "p6 emargination": ["not emarginated", "emarginated"]
-};
+let species = [];
+let questionOrder = [];
+let questionLabels = {};
+let questionDescriptions = {};
+let traitValueOrder = {};
+const traitWeights = { "p6-emargination": 3 };
+const singleChoiceCategories = new Set(["wing-flicking", "tail-flicking", "p6-emargination"]);
 
 const speciesGrid = document.querySelector("#species-grid");
 const quizForm = document.querySelector("#quiz-form");
@@ -39,13 +14,34 @@ const quizResults = document.querySelector("#quiz-results");
 const answerCount = document.querySelector("#answer-count");
 const speciesFilter = document.querySelector("#species-filter");
 const traitFilter = document.querySelector("#trait-filter");
+const glossaryEntries = document.querySelector("#glossary-entries");
+const dataSource = document.querySelector("#data-source");
 const eyeRingImages = {
-    "none": "images/eye_rings/none.png",
-    "thin, distinct": "images/eye_rings/thin_distinct.png",
-    "messy": "images/eye_rings/messy.png",
+    "indistinct": "images/eye_rings/indistinct.png",
+    "messy, distinct": "images/eye_rings/messy.png",
     "bold, crisp": "images/eye_rings/bold_crisp.png",
     "tear-shaped": "images/eye_rings/teardrop.png"
 };
+
+function categoryKey(label) {
+    return label.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+function parseTraits(data) {
+    questionOrder = data.categories.map(category => categoryKey(category.name));
+    questionLabels = Object.fromEntries(data.categories.map(category => [categoryKey(category.name), category.name]));
+    questionDescriptions = Object.fromEntries(data.categories.map(category => [categoryKey(category.name), category.description]));
+    traitValueOrder = Object.fromEntries(data.categories.map(category => [categoryKey(category.name), category.values]));
+    return data.species.map(bird => ({
+        name: bird.name,
+        code: bird.code,
+        traits: Object.fromEntries(Object.entries(bird.traits).map(([label, values]) => [categoryKey(label), traitValues(values)]))
+    }));
+}
+
+function renderGlossary() {
+    glossaryEntries.innerHTML = questionOrder.map(category => `<div><strong>${questionLabels[category]}:</strong> ${questionDescriptions[category]}</div>`).join("");
+}
 
 function displayValue(value) {
     return value.charAt(0).toUpperCase() + value.slice(1);
@@ -69,10 +65,11 @@ function renderReference(nameFilter = "", selectedTrait = "") {
         return matchesName && matchesTrait;
     });
     const filterDescription = [nameFilter, value].filter(Boolean).join(" / ");
-    speciesGrid.innerHTML = visible.length ? visible.map(bird => `<article class="species-card"><div class="species-card-top"><span class="species-code">${bird.code}</span><h3>${bird.name}</h3></div><dl>${Object.entries(bird.traits).map(([label, traitValue]) => `<div><dt>${label.replace(" 2", "")}</dt><dd>${traitValues(traitValue).map(value => `${traitImage(label, value)}<span>${displayValue(value)}</span>`).join("<br>")}</dd></div>`).join("")}</dl></article>`).join("") : `<p class="empty-state">No species match ${filterDescription || "these filters"}.</p>`;
+    speciesGrid.innerHTML = visible.length ? visible.map(bird => `<article class="species-card"><div class="species-card-top"><span class="species-code">${bird.code}</span><h3>${bird.name}</h3></div><dl>${questionOrder.map(category => `<div><dt>${questionLabels[category]}</dt><dd>${traitValues(bird.traits[category] || []).map(value => `${traitImage(category, value)}<span>${displayValue(value)}</span>`).join("<br>") || "—"}</dd></div>`).join("")}</dl></article>`).join("") : `<p class="empty-state">No species match ${filterDescription || "these filters"}.</p>`;
 }
 
 function renderTraitFilter() {
+    traitFilter.querySelectorAll("optgroup").forEach(group => group.remove());
     questionOrder.forEach(category => {
         const group = document.createElement("optgroup");
         group.label = questionLabels[category];
@@ -89,10 +86,13 @@ function renderTraitFilter() {
 function renderQuiz() {
     const categories = questionOrder.map(category => {
         const values = traitValueOrder[category];
-        return `<fieldset class="quiz-question"><legend>${questionLabels[category]}</legend><div class="option-list">${values.map(value => `<label class="option"><input type="checkbox" data-category="${category}" value="${value}"><span>${traitImage(category, value)}${displayValue(value)}</span></label>`).join("")}</div></fieldset>`;
+        const inputType = singleChoiceCategories.has(category) ? "radio" : "checkbox";
+        const inputName = inputType === "radio" ? ` name="${category}"` : "";
+        return `<fieldset class="quiz-question"><legend>${questionLabels[category]}</legend><div class="option-list">${values.map(value => `<label class="option"><input type="${inputType}"${inputName} data-category="${category}" value="${value}"><span>${traitImage(category, value)}${displayValue(value)}</span></label>`).join("")}</div></fieldset>`;
     });
     quizForm.innerHTML = categories.join("");
     restoreQuizState();
+    quizForm.addEventListener("click", handleQuizClick);
     quizForm.addEventListener("change", handleQuizChange);
 }
 
@@ -113,7 +113,30 @@ function restoreQuizState() {
 
     quizForm.querySelectorAll("input").forEach(input => {
         input.checked = savedAnswers.has(`${input.dataset.category}::${input.value}`);
+        if (input.type === "radio") {
+            input.dataset.selected = input.checked ? "true" : "false";
+        }
     });
+}
+
+function handleQuizClick(event) {
+    const input = event.target;
+    if (input.type !== "radio") {
+        return;
+    }
+
+    const group = [...quizForm.querySelectorAll(`input[name="${input.name}"]`)];
+    const wasSelected = input.dataset.selected === "true";
+    group.forEach(radio => { radio.dataset.selected = "false"; });
+
+    if (wasSelected) {
+        event.preventDefault();
+        input.checked = false;
+        updateHashFromQuiz(getHashState().view);
+        updateResults();
+    } else {
+        input.dataset.selected = "true";
+    }
 }
 
 function updateHashFromQuiz(view) {
@@ -172,10 +195,6 @@ document.querySelector("#reset-quiz").addEventListener("click", () => {
     updateResults();
 });
 
-document.querySelector("#species-count").textContent = `${species.length} species records / categorical + numeric-ready data`;
-renderTraitFilter();
-renderReference();
-renderQuiz();
 function applyHashState() {
     const { view } = getHashState();
     restoreQuizState();
@@ -184,5 +203,26 @@ function applyHashState() {
 }
 
 window.addEventListener("hashchange", applyHashState);
-applyHashState();
-updateResults();
+
+async function loadTraits() {
+    try {
+        const response = await fetch("empid_traits.json");
+        if (!response.ok) {
+            throw new Error(`Could not load empid_traits.json (${response.status})`);
+        }
+        const data = await response.json();
+        species = parseTraits(data);
+        renderGlossary();
+        renderTraitFilter();
+        renderReference();
+        renderQuiz();
+        document.querySelector("#species-count").textContent = `${species.length} species records / JSON reference data`;
+        dataSource.textContent = `Data: ${data.source}`;
+        applyHashState();
+    } catch (error) {
+        speciesGrid.innerHTML = `<p class="empty-state">The JSON reference data could not be loaded.</p>`;
+        console.error(error);
+    }
+}
+
+loadTraits();

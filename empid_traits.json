@@ -1,0 +1,1017 @@
+{
+  "categories": [
+    {
+      "name": "Crown shape",
+      "values": [
+        "round",
+        "peaked",
+        "flat",
+        "crested"
+      ],
+      "description": "The contour and fullness of the crown, from smooth or rounded to peaked or crested."
+    },
+    {
+      "name": "Forehead angle",
+      "values": [
+        "shallow",
+        "medium",
+        "steep"
+      ],
+      "description": "The slope from the bill base up into the crown."
+    },
+    {
+      "name": "Bill length",
+      "values": [
+        "short",
+        "medium",
+        "long"
+      ],
+      "description": "The bill length relative to the bird's head and overall body size."
+    },
+    {
+      "name": "Lower mandible",
+      "values": [
+        "all dark",
+        "partial",
+        "all orange/yellow"
+      ],
+      "description": "The visible color pattern along the lower half of the bill."
+    },
+    {
+      "name": "Tail length",
+      "values": [
+        "short",
+        "medium",
+        "long"
+      ],
+      "description": "The tail length relative to the body, from short to long."
+    },
+    {
+      "name": "Tail width",
+      "values": [
+        "wide",
+        "medium",
+        "narrow"
+      ],
+      "description": "The apparent breadth of the tail when viewed from below or behind."
+    },
+    {
+      "name": "Primary projection",
+      "values": [
+        "short",
+        "medium",
+        "long"
+      ],
+      "description": "How far the folded primary feathers extend beyond the tertials."
+    },
+    {
+      "name": "Wingbar contrast",
+      "values": [
+        "strong",
+        "medium",
+        "weak"
+      ],
+      "description": "How strongly the pale wingbars stand out against the darker wing."
+    },
+    {
+      "name": "Wing panel contrast",
+      "values": [
+        "strong",
+        "medium",
+        "weak"
+      ],
+      "description": "How strongly the paler area across the folded wing stands out."
+    },
+    {
+      "name": "Eye-ring",
+      "values": [
+        "indistinct",
+        "messy, distinct",
+        "bold, crisp",
+        "tear-shaped"
+      ],
+      "description": "The shape, sharpness, and distinctness of the pale feathers around the eye."
+    },
+    {
+      "name": "Upper/underpart contrast",
+      "values": [
+        "strong",
+        "medium",
+        "weak"
+      ],
+      "description": "The contrast between the bird's darker upperparts and lighter underparts."
+    },
+    {
+      "name": "Wing flicking",
+      "values": [
+        "often",
+        "occasional",
+        "rarely"
+      ],
+      "description": "How frequently the bird flicks or snaps its wings while perched."
+    },
+    {
+      "name": "Tail flicking",
+      "values": [
+        "often",
+        "occasional",
+        "rarely",
+        "tail dropping"
+      ],
+      "description": "How frequently the bird flicks, dips, or drops its tail while perched."
+    },
+    {
+      "name": "P6 emargination",
+      "values": [
+        "not emarginated",
+        "emarginated"
+      ],
+      "description": "Whether the outer edge of the sixth primary feather (P6) has a notch, called an emargination."
+    }
+  ],
+  "species": [
+    {
+      "name": "Tufted Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "crested"
+        ],
+        "Forehead angle": [
+          "medium",
+          "steep"
+        ],
+        "Bill length": [
+          "short",
+          "medium"
+        ],
+        "Lower mandible": [
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "long"
+        ],
+        "Tail width": [
+          "narrow"
+        ],
+        "Primary projection": [
+          "medium"
+        ],
+        "Wingbar contrast": [
+          "strong",
+          "medium"
+        ],
+        "Wing panel contrast": [
+          "strong",
+          "medium"
+        ],
+        "Eye-ring": [
+          "indistinct"
+        ],
+        "Upper/underpart contrast": [
+          "weak"
+        ],
+        "Wing flicking": [
+          "often",
+          "occasional"
+        ],
+        "Tail flicking": [
+          "often"
+        ],
+        "P6 emargination": [
+          "not emarginated"
+        ]
+      },
+      "code": "TUFL"
+    },
+    {
+      "name": "Olive-sided Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "peaked",
+          "crested"
+        ],
+        "Forehead angle": [
+          "shallow",
+          "medium"
+        ],
+        "Bill length": [
+          "medium",
+          "long"
+        ],
+        "Lower mandible": [
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "short"
+        ],
+        "Tail width": [
+          "wide"
+        ],
+        "Primary projection": [
+          "long"
+        ],
+        "Wingbar contrast": [
+          "weak"
+        ],
+        "Wing panel contrast": [
+          "weak"
+        ],
+        "Eye-ring": [
+          "indistinct"
+        ],
+        "Upper/underpart contrast": [
+          "strong"
+        ],
+        "Wing flicking": [
+          "rarely"
+        ],
+        "Tail flicking": [
+          "rarely"
+        ],
+        "P6 emargination": [
+          "not emarginated"
+        ]
+      },
+      "code": "OSFL"
+    },
+    {
+      "name": "Greater Pewee",
+      "traits": {
+        "Crown shape": [
+          "peaked",
+          "crested"
+        ],
+        "Forehead angle": [
+          "shallow",
+          "medium"
+        ],
+        "Bill length": [
+          "long"
+        ],
+        "Lower mandible": [
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "long"
+        ],
+        "Tail width": [
+          "wide"
+        ],
+        "Primary projection": [
+          "long"
+        ],
+        "Wingbar contrast": [
+          "weak"
+        ],
+        "Wing panel contrast": [
+          "weak"
+        ],
+        "Eye-ring": [
+          "indistinct"
+        ],
+        "Upper/underpart contrast": [
+          "weak"
+        ],
+        "Wing flicking": [
+          "rarely"
+        ],
+        "Tail flicking": [
+          "rarely"
+        ],
+        "P6 emargination": [
+          "not emarginated"
+        ]
+      },
+      "code": "GRPE"
+    },
+    {
+      "name": "Western Wood-Pewee",
+      "traits": {
+        "Crown shape": [
+          "peaked",
+          "crested"
+        ],
+        "Forehead angle": [
+          "shallow",
+          "medium"
+        ],
+        "Bill length": [
+          "long"
+        ],
+        "Lower mandible": [
+          "all dark",
+          "partial"
+        ],
+        "Tail length": [
+          "short",
+          "medium"
+        ],
+        "Tail width": [
+          "wide"
+        ],
+        "Primary projection": [
+          "long"
+        ],
+        "Wingbar contrast": [
+          "weak"
+        ],
+        "Wing panel contrast": [
+          "weak"
+        ],
+        "Eye-ring": [
+          "indistinct"
+        ],
+        "Upper/underpart contrast": [
+          "weak"
+        ],
+        "Wing flicking": [
+          "rarely"
+        ],
+        "Tail flicking": [
+          "rarely"
+        ],
+        "P6 emargination": [
+          "emarginated"
+        ]
+      },
+      "code": "WEWP"
+    },
+    {
+      "name": "Eastern Wood-Pewee",
+      "traits": {
+        "Crown shape": [
+          "peaked",
+          "crested"
+        ],
+        "Forehead angle": [
+          "shallow",
+          "medium"
+        ],
+        "Bill length": [
+          "long"
+        ],
+        "Lower mandible": [
+          "partial",
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "short",
+          "medium"
+        ],
+        "Tail width": [
+          "wide"
+        ],
+        "Primary projection": [
+          "long"
+        ],
+        "Wingbar contrast": [
+          "medium",
+          "weak"
+        ],
+        "Wing panel contrast": [
+          "weak"
+        ],
+        "Eye-ring": [
+          "indistinct"
+        ],
+        "Upper/underpart contrast": [
+          "medium",
+          "weak"
+        ],
+        "Wing flicking": [
+          "rarely"
+        ],
+        "Tail flicking": [
+          "rarely"
+        ],
+        "P6 emargination": [
+          "not emarginated"
+        ]
+      },
+      "code": "EAWP"
+    },
+    {
+      "name": "Cuban Pewee",
+      "traits": {
+        "Crown shape": [
+          "peaked",
+          "crested"
+        ],
+        "Forehead angle": [
+          "shallow",
+          "medium"
+        ],
+        "Bill length": [
+          "medium",
+          "long"
+        ],
+        "Lower mandible": [
+          "partial",
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "long"
+        ],
+        "Tail width": [
+          "wide"
+        ],
+        "Primary projection": [
+          "medium"
+        ],
+        "Wingbar contrast": [
+          "weak"
+        ],
+        "Wing panel contrast": [
+          "medium"
+        ],
+        "Eye-ring": [
+          "tear-shaped"
+        ],
+        "Upper/underpart contrast": [
+          "weak"
+        ],
+        "Wing flicking": [
+          "rarely"
+        ],
+        "Tail flicking": [
+          "often"
+        ],
+        "P6 emargination": [
+          "not emarginated"
+        ]
+      },
+      "code": "CUPE"
+    },
+    {
+      "name": "Acadian Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "peaked"
+        ],
+        "Forehead angle": [
+          "shallow"
+        ],
+        "Bill length": [
+          "long"
+        ],
+        "Lower mandible": [
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "medium"
+        ],
+        "Tail width": [
+          "wide"
+        ],
+        "Primary projection": [
+          "long"
+        ],
+        "Wingbar contrast": [
+          "strong"
+        ],
+        "Wing panel contrast": [
+          "strong",
+          "medium"
+        ],
+        "Eye-ring": [
+          "bold, crisp"
+        ],
+        "Upper/underpart contrast": [
+          "strong"
+        ],
+        "Wing flicking": [
+          "occasional"
+        ],
+        "Tail flicking": [
+          "occasional",
+          "rarely"
+        ],
+        "P6 emargination": [
+          "not emarginated"
+        ]
+      },
+      "code": "ACFL"
+    },
+    {
+      "name": "Alder Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "round"
+        ],
+        "Forehead angle": [
+          "medium"
+        ],
+        "Bill length": [
+          "medium"
+        ],
+        "Lower mandible": [
+          "partial",
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "medium"
+        ],
+        "Tail width": [
+          "medium"
+        ],
+        "Primary projection": [
+          "medium"
+        ],
+        "Wingbar contrast": [
+          "medium"
+        ],
+        "Wing panel contrast": [
+          "medium"
+        ],
+        "Eye-ring": [
+          "indistinct"
+        ],
+        "Upper/underpart contrast": [
+          "strong",
+          "medium"
+        ],
+        "Wing flicking": [
+          "occasional"
+        ],
+        "Tail flicking": [
+          "occasional",
+          "rarely"
+        ],
+        "P6 emargination": [
+          "not emarginated"
+        ]
+      },
+      "code": "ALFL"
+    },
+    {
+      "name": "Willow Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "peaked"
+        ],
+        "Forehead angle": [
+          "medium"
+        ],
+        "Bill length": [
+          "medium"
+        ],
+        "Lower mandible": [
+          "partial",
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "medium"
+        ],
+        "Tail width": [
+          "medium"
+        ],
+        "Primary projection": [
+          "medium"
+        ],
+        "Wingbar contrast": [
+          "medium",
+          "weak"
+        ],
+        "Wing panel contrast": [
+          "medium",
+          "weak"
+        ],
+        "Eye-ring": [
+          "indistinct"
+        ],
+        "Upper/underpart contrast": [
+          "medium"
+        ],
+        "Wing flicking": [
+          "occasional"
+        ],
+        "Tail flicking": [
+          "occasional",
+          "rarely"
+        ],
+        "P6 emargination": [
+          "not emarginated"
+        ]
+      },
+      "code": "WIFL"
+    },
+    {
+      "name": "Yellow-bellied Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "round"
+        ],
+        "Forehead angle": [
+          "medium"
+        ],
+        "Bill length": [
+          "medium"
+        ],
+        "Lower mandible": [
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "medium"
+        ],
+        "Tail width": [
+          "narrow"
+        ],
+        "Primary projection": [
+          "medium"
+        ],
+        "Wingbar contrast": [
+          "strong"
+        ],
+        "Wing panel contrast": [
+          "strong"
+        ],
+        "Eye-ring": [
+          "bold, crisp"
+        ],
+        "Upper/underpart contrast": [
+          "weak"
+        ],
+        "Wing flicking": [
+          "often"
+        ],
+        "Tail flicking": [
+          "often"
+        ],
+        "P6 emargination": [
+          "emarginated"
+        ]
+      },
+      "code": "YBFL"
+    },
+    {
+      "name": "Western Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "peaked",
+          "crested"
+        ],
+        "Forehead angle": [
+          "medium"
+        ],
+        "Bill length": [
+          "medium"
+        ],
+        "Lower mandible": [
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "medium"
+        ],
+        "Tail width": [
+          "narrow"
+        ],
+        "Primary projection": [
+          "medium",
+          "long"
+        ],
+        "Wingbar contrast": [
+          "medium"
+        ],
+        "Wing panel contrast": [
+          "medium",
+          "weak"
+        ],
+        "Eye-ring": [
+          "tear-shaped"
+        ],
+        "Upper/underpart contrast": [
+          "weak"
+        ],
+        "Wing flicking": [
+          "often"
+        ],
+        "Tail flicking": [
+          "often"
+        ],
+        "P6 emargination": [
+          "emarginated"
+        ]
+      },
+      "code": "WEFL"
+    },
+    {
+      "name": "Hammond's Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "round",
+          "peaked"
+        ],
+        "Forehead angle": [
+          "steep"
+        ],
+        "Bill length": [
+          "short"
+        ],
+        "Lower mandible": [
+          "all dark",
+          "partial"
+        ],
+        "Tail length": [
+          "short",
+          "medium",
+          "long"
+        ],
+        "Tail width": [
+          "narrow"
+        ],
+        "Primary projection": [
+          "medium",
+          "long"
+        ],
+        "Wingbar contrast": [
+          "medium"
+        ],
+        "Wing panel contrast": [
+          "medium"
+        ],
+        "Eye-ring": [
+          "messy, distinct"
+        ],
+        "Upper/underpart contrast": [
+          "weak"
+        ],
+        "Wing flicking": [
+          "often"
+        ],
+        "Tail flicking": [
+          "often"
+        ],
+        "P6 emargination": [
+          "emarginated"
+        ]
+      },
+      "code": "HAFL"
+    },
+    {
+      "name": "Dusky Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "round",
+          "peaked",
+          "flat"
+        ],
+        "Forehead angle": [
+          "medium"
+        ],
+        "Bill length": [
+          "medium"
+        ],
+        "Lower mandible": [
+          "all dark",
+          "partial"
+        ],
+        "Tail length": [
+          "medium",
+          "long"
+        ],
+        "Tail width": [
+          "narrow"
+        ],
+        "Primary projection": [
+          "short",
+          "medium"
+        ],
+        "Wingbar contrast": [
+          "medium",
+          "weak"
+        ],
+        "Wing panel contrast": [
+          "medium",
+          "weak"
+        ],
+        "Eye-ring": [
+          "messy, distinct"
+        ],
+        "Upper/underpart contrast": [
+          "medium",
+          "weak"
+        ],
+        "Wing flicking": [
+          "often"
+        ],
+        "Tail flicking": [
+          "often"
+        ],
+        "P6 emargination": [
+          "emarginated"
+        ]
+      },
+      "code": "DUFL"
+    },
+    {
+      "name": "Pine Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "peaked",
+          "crested"
+        ],
+        "Forehead angle": [
+          "medium",
+          "steep"
+        ],
+        "Bill length": [
+          "medium"
+        ],
+        "Lower mandible": [
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "medium",
+          "long"
+        ],
+        "Tail width": [
+          "narrow"
+        ],
+        "Primary projection": [
+          "medium",
+          "long"
+        ],
+        "Wingbar contrast": [
+          "medium"
+        ],
+        "Wing panel contrast": [
+          "weak"
+        ],
+        "Eye-ring": [
+          "messy, distinct",
+          "tear-shaped"
+        ],
+        "Upper/underpart contrast": [
+          "weak"
+        ],
+        "Wing flicking": [
+          "often"
+        ],
+        "Tail flicking": [
+          "often"
+        ],
+        "P6 emargination": [
+          "emarginated"
+        ]
+      },
+      "code": "PNFL"
+    },
+    {
+      "name": "Gray Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "flat"
+        ],
+        "Forehead angle": [
+          "shallow",
+          "medium"
+        ],
+        "Bill length": [
+          "long"
+        ],
+        "Lower mandible": [
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "long"
+        ],
+        "Tail width": [
+          "narrow"
+        ],
+        "Primary projection": [
+          "short",
+          "medium"
+        ],
+        "Wingbar contrast": [
+          "weak"
+        ],
+        "Wing panel contrast": [
+          "weak"
+        ],
+        "Eye-ring": [
+          "messy, distinct"
+        ],
+        "Upper/underpart contrast": [
+          "weak"
+        ],
+        "Wing flicking": [
+          "often"
+        ],
+        "Tail flicking": [
+          "tail dropping"
+        ],
+        "P6 emargination": [
+          "emarginated"
+        ]
+      },
+      "code": "GRFL"
+    },
+    {
+      "name": "Least Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "round",
+          "peaked"
+        ],
+        "Forehead angle": [
+          "medium"
+        ],
+        "Bill length": [
+          "short",
+          "medium"
+        ],
+        "Lower mandible": [
+          "partial",
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "short",
+          "medium"
+        ],
+        "Tail width": [
+          "narrow"
+        ],
+        "Primary projection": [
+          "short",
+          "medium"
+        ],
+        "Wingbar contrast": [
+          "strong"
+        ],
+        "Wing panel contrast": [
+          "strong"
+        ],
+        "Eye-ring": [
+          "messy, distinct"
+        ],
+        "Upper/underpart contrast": [
+          "strong"
+        ],
+        "Wing flicking": [
+          "often"
+        ],
+        "Tail flicking": [
+          "often"
+        ],
+        "P6 emargination": [
+          "emarginated"
+        ]
+      },
+      "code": "LEFL"
+    },
+    {
+      "name": "Buff-breasted Flycatcher",
+      "traits": {
+        "Crown shape": [
+          "round"
+        ],
+        "Forehead angle": [
+          "medium",
+          "steep"
+        ],
+        "Bill length": [
+          "short",
+          "medium"
+        ],
+        "Lower mandible": [
+          "all orange/yellow"
+        ],
+        "Tail length": [
+          "long"
+        ],
+        "Tail width": [
+          "narrow"
+        ],
+        "Primary projection": [
+          "short",
+          "medium"
+        ],
+        "Wingbar contrast": [
+          "strong",
+          "medium"
+        ],
+        "Wing panel contrast": [
+          "weak"
+        ],
+        "Eye-ring": [
+          "messy, distinct"
+        ],
+        "Upper/underpart contrast": [
+          "medium",
+          "weak"
+        ],
+        "Wing flicking": [
+          "often"
+        ],
+        "Tail flicking": [
+          "often"
+        ],
+        "P6 emargination": [
+          "not emarginated"
+        ]
+      },
+      "code": "BBFL"
+    }
+  ],
+  "source": "Field Guide to North American Flycatchers - Empidonax and Pewees by Cin-Ty Lee and Andrew Birch"
+}
