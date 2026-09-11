@@ -1,6 +1,6 @@
-Category	Trait	Yellow-Bellied	Western	Dusky	Hammond's	Least	Alder	Acadion	Willow	Gray	Western Wood-Pewee	Eastern Wood-Pewee
+Category	Trait	Yellow-Bellied	Western	Dusky	Hammond's	Least	Alder	Acadian	Willow	Gray	Western Wood-Pewee	Eastern Wood-Pewee
 Eye-Ring	None				x		x		x		x	x
-Eye-Ring	Thin, distinct				x	x	x					x
+Eye-Ring	Thin, distinct				x	x	x		x			x
 Eye-Ring	messy			x	x	x				x		
 Eye-Ring	bold, crisp	x				x		x				
 Eye-Ring	tear-shaped		x									
@@ -35,3 +35,5 @@ wingbar contrast	weak									x	x	x
 wing panel contrast	strong	x				x						
 wing panel contrast	medium		x	x	x		x	x				
 wing panel contrast	weak			x	x				x	x	x	x
+p6 emargination	not emarginated						x	x	x		x	x
+p6 emargination	emarginated	x	x	x	x	x				x		
