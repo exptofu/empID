@@ -15,7 +15,7 @@ const species = [
     {"name":"Eastern Wood-Pewee","code":"EAWP","traits":{"eye-ring":["none","thin, distinct"],"lower mandible":["all dark","partial"],"bill size":"long","tail length":"medium","primary extension":"long","crown shape":["peaked","crested"],"forehead angle":["shallow","medium"],"underpart/upperpart contrast":["medium","weak"],"wingbar contrast":["medium","weak"],"wing panel contrast":"weak","p6 emargination":"not emarginated"},"measurements":{"primaryTipSpacing":{"p8_p7":null,"p7_p6":null,"p6_p5":null,"p5_p4":null,"p4_p3":null}}},
 ];
 
-const questionOrder = ["p6 emargination", "eye-ring", "lower mandible", "bill size", "tail length", "primary extension", "tail width", "crown shape", "forehead angle", "underpart/upperpart contrast", "wingbar contrast", "wing panel contrast"];
+const questionOrder = ["eye-ring", "lower mandible", "bill size", "tail length", "primary extension", "tail width", "crown shape", "forehead angle", "underpart/upperpart contrast", "wingbar contrast", "wing panel contrast", "p6 emargination"];
 const questionLabels = { "eye-ring": "Eye-ring", "lower mandible": "Lower mandible", "bill size": "Bill size", "tail length": "Tail length", "primary extension": "Primary extension", "tail width": "Tail width", "crown shape": "Crown shape", "forehead angle": "Forehead angle", "underpart/upperpart contrast": "Underpart / upperpart contrast", "wingbar contrast": "Wingbar contrast", "wing panel contrast": "Wing panel contrast", "p6 emargination": "P6 emargination" };
 const traitWeights = { "p6 emargination": 3 };
 const traitValueOrder = {
