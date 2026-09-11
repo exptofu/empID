@@ -34,10 +34,11 @@ h2 { margin: 0; max-width: 650px; font: 800 clamp(36px, 6vw, 74px)/.98 Georgia, 
 .field-mark-guide[open] summary { margin-bottom: 12px; }
 .field-mark-guide strong { color: var(--ink); }
 .p6-diagram { max-width: 520px; margin: 20px 0 0; }
-.p6-diagram-image { position: relative; overflow: hidden;}
+.p6-diagram-image { display: block; position: relative; width: 100%; overflow: hidden; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; text-align: left; }
 .p6-diagram-image img { display: block; width: 100%; height: auto; }
 .p6-diagram-hover { position: absolute; inset: 0; opacity: 0; transition: opacity .18s ease; }
-.p6-diagram-image:hover .p6-diagram-hover, .p6-diagram-image:focus-within .p6-diagram-hover { opacity: 1; }
+.p6-diagram-image[aria-pressed="true"] .p6-diagram-hover { opacity: 1; }
+.p6-diagram-image:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .p6-diagram figcaption { margin-top: 9px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .reference-filters { display: grid; grid-template-columns: repeat(2, minmax(150px, 1fr)); gap: 18px; width: min(580px, 100%); }
 .search-field { display: grid; gap: 7px; width: 100%; color: var(--muted); font: 500 10px 'DM Mono', monospace; text-transform: uppercase; }

@@ -14,6 +14,7 @@ const answerCount = document.querySelector("#answer-count");
 const speciesFilter = document.querySelector("#species-filter");
 const traitFilter = document.querySelector("#trait-filter");
 const glossaryEntries = document.querySelector("#glossary-entries");
+const p6Diagram = document.querySelector(".p6-diagram-image");
 const dataSource = document.querySelector("#data-source");
 const eyeRingImages = {
     "indistinct": "images/eye_rings/indistinct.png",
@@ -40,6 +41,12 @@ function parseTraits(data) {
 
 function renderGlossary() {
     glossaryEntries.innerHTML = questionOrder.map(category => `<div><strong>${questionLabels[category]}:</strong> ${questionDescriptions[category]}</div>`).join("");
+}
+
+function toggleP6Diagram() {
+    const isPressed = p6Diagram.getAttribute("aria-pressed") === "true";
+    p6Diagram.setAttribute("aria-pressed", String(!isPressed));
+    p6Diagram.setAttribute("aria-label", `${isPressed ? "Show" : "Hide"} P6 emargination overlay`);
 }
 
 function displayValue(value) {
@@ -160,6 +167,7 @@ function setActiveView(view, updateHash = true) {
 }
 
 document.querySelectorAll("[data-view]").forEach(button => button.addEventListener("click", () => setActiveView(button.dataset.view)));
+p6Diagram.addEventListener("click", toggleP6Diagram);
 speciesFilter.addEventListener("input", event => renderReference(event.target.value, traitFilter.value));
 traitFilter.addEventListener("change", event => renderReference(speciesFilter.value, event.target.value));
 document.querySelector("#reset-quiz").addEventListener("click", () => {
