@@ -6,7 +6,6 @@ let questionLabels = {};
 let questionDescriptions = {};
 let traitValueOrder = {};
 const traitWeights = { "p6-emargination": 3 };
-const singleChoiceCategories = new Set(["wing-flicking", "tail-flicking", "p6-emargination"]);
 
 const speciesGrid = document.querySelector("#species-grid");
 const quizForm = document.querySelector("#quiz-form");
@@ -86,13 +85,10 @@ function renderTraitFilter() {
 function renderQuiz() {
     const categories = questionOrder.map(category => {
         const values = traitValueOrder[category];
-        const inputType = singleChoiceCategories.has(category) ? "radio" : "checkbox";
-        const inputName = inputType === "radio" ? ` name="${category}"` : "";
-        return `<fieldset class="quiz-question"><legend>${questionLabels[category]}</legend><div class="option-list">${values.map(value => `<label class="option"><input type="${inputType}"${inputName} data-category="${category}" value="${value}"><span>${traitImage(category, value)}${displayValue(value)}</span></label>`).join("")}</div></fieldset>`;
+        return `<fieldset class="quiz-question"><legend>${questionLabels[category]}</legend><div class="option-list">${values.map(value => `<label class="option"><input type="checkbox" data-category="${category}" value="${value}"><span>${traitImage(category, value)}${displayValue(value)}</span></label>`).join("")}</div></fieldset>`;
     });
     quizForm.innerHTML = categories.join("");
     restoreQuizState();
-    quizForm.addEventListener("click", handleQuizClick);
     quizForm.addEventListener("change", handleQuizChange);
 }
 
@@ -113,31 +109,7 @@ function restoreQuizState() {
 
     quizForm.querySelectorAll("input").forEach(input => {
         input.checked = savedAnswers.has(`${input.dataset.category}::${input.value}`);
-        if (input.type === "radio") {
-            input.dataset.selected = input.checked ? "true" : "false";
-        }
     });
-}
-
-function handleQuizClick(event) {
-    const option = event.target.closest(".option");
-    const input = option?.querySelector("input");
-    if (input?.type !== "radio") {
-        return;
-    }
-
-    const group = [...quizForm.querySelectorAll(`input[name="${input.name}"]`)];
-    const wasSelected = input.dataset.selected === "true";
-    group.forEach(radio => { radio.dataset.selected = "false"; });
-
-    if (wasSelected) {
-        event.preventDefault();
-        input.checked = false;
-        updateHashFromQuiz(getHashState().view);
-        updateResults();
-    } else {
-        input.dataset.selected = "true";
-    }
 }
 
 function updateHashFromQuiz(view) {
