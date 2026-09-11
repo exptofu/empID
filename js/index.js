@@ -120,8 +120,9 @@ function restoreQuizState() {
 }
 
 function handleQuizClick(event) {
-    const input = event.target;
-    if (input.type !== "radio") {
+    const option = event.target.closest(".option");
+    const input = option?.querySelector("input");
+    if (input?.type !== "radio") {
         return;
     }
 
