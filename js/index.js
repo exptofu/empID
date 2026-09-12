@@ -5,6 +5,8 @@ let questionOrder = [];
 let questionLabels = {};
 let questionDescriptions = {};
 let traitValueOrder = {};
+const savedRegion = localStorage.getItem("empid-region");
+let activeRegion = ["all", "west", "east"].includes(savedRegion) ? savedRegion : "all";
 const traitWeights = { "p6-emargination": 3 };
 
 const speciesGrid = document.querySelector("#species-grid");
@@ -16,6 +18,27 @@ const traitFilter = document.querySelector("#trait-filter");
 const glossaryEntries = document.querySelector("#glossary-entries");
 const p6Diagram = document.querySelector(".p6-diagram-image");
 const dataSource = document.querySelector("#data-source");
+const darkModeToggle = document.querySelector("#dark-mode-toggle");
+const regionButtons = document.querySelectorAll("[data-region]");
+const regionsBySpecies = {
+    "Tufted Flycatcher": ["west"],
+    "Olive-sided Flycatcher": ["west", "east"],
+    "Greater Pewee": ["west"],
+    "Western Wood-Pewee": ["west"],
+    "Eastern Wood-Pewee": ["east"],
+    "Cuban Pewee": [],
+    "Acadian Flycatcher": ["east"],
+    "Alder Flycatcher": ["east"],
+    "Willow Flycatcher": ["west", "east"],
+    "Yellow-bellied Flycatcher": ["east"],
+    "Western Flycatcher": ["west"],
+    "Hammond's Flycatcher": ["west"],
+    "Dusky Flycatcher": ["west"],
+    "Pine Flycatcher": ["west"],
+    "Gray Flycatcher": ["west"],
+    "Least Flycatcher": ["east"],
+    "Buff-breasted Flycatcher": ["west"]
+};
 const eyeRingImages = {
     "indistinct": "images/eye_rings/indistinct.png",
     "messy, distinct": "images/eye_rings/messy.png",
@@ -35,6 +58,7 @@ function parseTraits(data) {
     return data.species.map(bird => ({
         name: bird.name,
         code: bird.code,
+        regions: regionsBySpecies[bird.name] || [],
         traits: Object.fromEntries(Object.entries(bird.traits).map(([label, values]) => [categoryKey(label), traitValues(values)]))
     }));
 }
@@ -62,13 +86,17 @@ function traitImage(category, value) {
     return image ? `<img class="trait-image" src="${image}" alt="${displayValue(value)} eye-ring">` : "";
 }
 
+function isInActiveRegion(bird) {
+    return activeRegion === "all" || bird.regions.includes(activeRegion);
+}
+
 function renderReference(nameFilter = "", selectedTrait = "") {
     const query = nameFilter.trim().toLowerCase();
     const [category, value] = selectedTrait.split("::");
     const visible = species.filter(bird => {
         const matchesName = !query || bird.name.toLowerCase().includes(query);
         const matchesTrait = !selectedTrait || traitValues(bird.traits[category]).includes(value);
-        return matchesName && matchesTrait;
+        return isInActiveRegion(bird) && matchesName && matchesTrait;
     });
     const filterDescription = [nameFilter, value].filter(Boolean).join(" / ");
     speciesGrid.innerHTML = visible.length ? visible.map(bird => `<article class="species-card"><div class="species-card-top"><span class="species-code">${bird.code}</span><h3>${bird.name}</h3></div><dl>${questionOrder.map(category => `<div><dt>${questionLabels[category]}</dt><dd>${traitValues(bird.traits[category] || []).map(value => `${traitImage(category, value)}<span>${displayValue(value)}</span>`).join("<br>") || "—"}</dd></div>`).join("")}</dl></article>`).join("") : `<p class="empty-state">No species match ${filterDescription || "these filters"}.</p>`;
@@ -101,7 +129,7 @@ function renderQuiz() {
 
 function getHashState() {
     const [viewPart, query = ""] = window.location.hash.slice(1).split("?");
-    const view = ["reference", "quiz"].includes(viewPart) ? viewPart : "reference";
+    const view = ["reference", "glossary", "quiz"].includes(viewPart) ? viewPart : "reference";
     const answers = new Set();
 
     new URLSearchParams(query).forEach((value, category) => {
@@ -144,7 +172,7 @@ function updateResults() {
         return result;
     }, {});
     answerCount.textContent = `${selected.length} clue${selected.length === 1 ? "" : "s"} selected`;
-    const ranked = species.map(bird => {
+    const ranked = species.filter(isInActiveRegion).map(bird => {
         const categories = Object.keys(answers);
         const totalWeight = categories.reduce((total, category) => total + (traitWeights[category] || 1), 0);
         const matches = categories.reduce((total, category) => total + (answers[category].some(answer => traitValues(bird.traits[category]).includes(answer)) ? (traitWeights[category] || 1) : 0), 0);
@@ -166,8 +194,30 @@ function setActiveView(view, updateHash = true) {
     }
 }
 
+function setActiveRegion(region) {
+    activeRegion = region;
+    localStorage.setItem("empid-region", region);
+    regionButtons.forEach(button => {
+        const isActive = button.dataset.region === region;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+    });
+    renderReference(speciesFilter.value, traitFilter.value);
+    updateResults();
+}
+
+function setDarkMode(enabled) {
+    document.body.classList.toggle("dark-mode", enabled);
+    darkModeToggle.setAttribute("aria-pressed", String(enabled));
+    darkModeToggle.textContent = enabled ? "Light mode" : "Dark mode";
+    localStorage.setItem("empid-dark-mode", String(enabled));
+}
+
 document.querySelectorAll("[data-view]").forEach(button => button.addEventListener("click", () => setActiveView(button.dataset.view)));
 p6Diagram.addEventListener("click", toggleP6Diagram);
+regionButtons.forEach(button => button.addEventListener("click", () => setActiveRegion(button.dataset.region)));
+darkModeToggle.addEventListener("click", () => setDarkMode(!document.body.classList.contains("dark-mode")));
+setActiveRegion(activeRegion);
 speciesFilter.addEventListener("input", event => renderReference(event.target.value, traitFilter.value));
 traitFilter.addEventListener("change", event => renderReference(speciesFilter.value, event.target.value));
 document.querySelector("#reset-quiz").addEventListener("click", () => {
@@ -207,3 +257,5 @@ async function loadTraits() {
 }
 
 loadTraits();
+
+setDarkMode(localStorage.getItem("empid-dark-mode") === "true");

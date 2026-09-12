@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#173f3a">
-    <title>empID | Empidonax field guide</title>
+    <title>empID | Empidonax helper tool</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="css/index.css">
 </head>
@@ -16,6 +16,14 @@
             </div>
             <div>
                 <h1>empID</h1>
+            </div>
+            <div class="header-controls">
+                <div class="region-toggle" role="group" aria-label="Filter empids by region">
+                    <button class="region-button active" type="button" data-region="all" aria-pressed="true">All of NA</button>
+                    <button class="region-button" type="button" data-region="west" aria-pressed="false">West Coast</button>
+                    <button class="region-button" type="button" data-region="east" aria-pressed="false">East Coast</button>
+                </div>
+                <button id="dark-mode-toggle" class="dark-mode-toggle" type="button" aria-pressed="false">Dark mode</button>
             </div>
         </header>
 
@@ -32,26 +40,21 @@
                 <span class="action-title">Questionnaire</span>
                 <span class="action-description">Rank likely species from your observation</span>
             </button>
-            <a class="action-card action-link" href="ptip.html" target="_blank" rel="noopener noreferrer" aria-label="Open Primary Tip Tool in a new tab">
+            <button class="action-card" type="button" data-view="glossary" aria-controls="glossary-view" aria-selected="false">
                 <span class="action-number">03</span>
-                <span class="action-icon" aria-hidden="true">↗</span>
+                <span class="action-icon" aria-hidden="true">≡</span>
+                <span class="action-title">Glossary</span>
+                <span class="action-description">Review field mark definitions</span>
+            </button>
+            <a class="action-card action-link" href="ptip.html" target="_blank" rel="noopener noreferrer" aria-label="Open Primary Tip Tool in a new tab">
+                <span class="action-number">04</span>
+                <span class="action-icon" aria-hidden="true">&#x2197;&#xFE0E;</span>
                 <span class="action-title">Primary Tip Tool</span>
                 <span class="action-description">Measure feather tips in a photo</span>
             </a>
         </nav>
 
         <section id="reference-view" class="view-panel" data-panel="reference" aria-labelledby="reference-title">
-            <details class="field-mark-guide" open>
-                <summary>Field Marks Glossary</summary>
-                <div id="glossary-entries"></div>
-                <figure class="p6-diagram">
-                    <button class="p6-diagram-image" type="button" aria-pressed="false" aria-label="Show P6 emargination overlay">
-                        <img src="images/p6_diagram.png" alt="Sample primaries of a flycatcher showing P6 emargination">
-                        <img class="p6-diagram-hover" src="images/p6_diagram_hover.png" alt="">
-                    </button>
-                    <figcaption>Sample primaries of a flycatcher with emargination at P6. When possible, start counting at P9 as that will be the primary that is laterally the furthest when the wing is folded. Click the image to show the emarginated sections of the feathers.</figcaption>
-                </figure>
-            </details>
             <div class="panel-heading">
                 <div>
                     <p class="kicker">Reference library</p>
@@ -71,6 +74,26 @@
                 </div>
             </div>
             <div id="species-grid" class="species-grid"></div>
+        </section>
+
+        <section id="glossary-view" class="view-panel hidden" data-panel="glossary" aria-labelledby="glossary-title">
+            <div class="panel-heading">
+                <div>
+                    <p class="kicker">Field marks</p>
+                    <h2 id="glossary-title">Glossary</h2>
+                    <p class="panel-note">Definitions and visual references for the traits used throughout the guide.</p>
+                </div>
+            </div>
+            <div class="field-mark-guide">
+                <div id="glossary-entries"></div>
+                <figure class="p6-diagram">
+                    <button class="p6-diagram-image" type="button" aria-pressed="false" aria-label="Show P6 emargination overlay">
+                        <img src="images/p6_diagram.png" alt="Sample primaries of a flycatcher showing P6 emargination">
+                        <img class="p6-diagram-hover" src="images/p6_diagram_hover.png" alt="">
+                    </button>
+                    <figcaption>Sample primaries of a flycatcher with emargination at P6. When possible, start counting at P9 as that will be the primary that is laterally the furthest when the wing is folded. Click the image to show the emarginated sections of the feathers.</figcaption>
+                </figure>
+            </div>
         </section>
 
         <section id="quiz-view" class="view-panel hidden" data-panel="quiz" aria-labelledby="quiz-title">
