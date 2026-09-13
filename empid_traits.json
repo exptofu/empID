@@ -334,6 +334,13 @@
           "emarginated"
         ]
       },
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 0.81,
+        "P6": 0.49,
+        "P5": 0.26,
+        "P4": 0.11
+      },
       "code": "WEWP"
     },
     {
@@ -387,6 +394,13 @@
         "P6 emargination": [
           "not emarginated"
         ]
+      },
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 0.82,
+        "P6": 0.49,
+        "P5": 0.25,
+        "P4": 0.10
       },
       "code": "EAWP"
     },
@@ -490,6 +504,13 @@
           "not emarginated"
         ]
       },
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 0.93,
+        "P6": 0.57,
+        "P5": 0.30,
+        "P4": 0.13
+      },
       "code": "ACFL"
     },
     {
@@ -541,6 +562,13 @@
           "not emarginated"
         ]
       },
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 0.93,
+        "P6": 0.60,
+        "P5": 0.33,
+        "P4": 0.14
+      },
       "code": "ALFL"
     },
     {
@@ -566,6 +594,7 @@
           "medium"
         ],
         "Primary projection": [
+          "short",
           "medium"
         ],
         "Wingbar contrast": [
@@ -592,6 +621,13 @@
         "P6 emargination": [
           "not emarginated"
         ]
+      },
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 0.97,
+        "P6": 0.72,
+        "P5": 0.38,
+        "P4": 0.15
       },
       "code": "WIFL"
     },
@@ -640,6 +676,13 @@
         "P6 emargination": [
           "emarginated"
         ]
+      },
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 0.95,
+        "P6": 0.69,
+        "P5": 0.34,
+        "P4": 0.13
       },
       "code": "YBFL"
     },
@@ -691,6 +734,13 @@
         "P6 emargination": [
           "emarginated"
         ]
+      },
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 0.99,
+        "P6": 0.82,
+        "P5": 0.39,
+        "P4": 0.15
       },
       "code": "WEFL"
     },
@@ -744,6 +794,13 @@
         "P6 emargination": [
           "emarginated"
         ]
+      },
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 0.98,
+        "P6": 0.76,
+        "P5": 0.35,
+        "P4": 0.14
       },
       "code": "HAFL"
     },
@@ -801,6 +858,13 @@
           "emarginated"
         ]
       },
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 1.00,
+        "P6": 0.91,
+        "P5": 0.55,
+        "P4": 0.20
+      },
       "code": "DUFL"
     },
     {
@@ -854,7 +918,14 @@
           "emarginated"
         ]
       },
-      "code": "PNFL"
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 0.99,
+        "P6": 0.87,
+        "P5": 0.47,
+        "P4": 0.16
+      },
+      "code": "PINF"
     },
     {
       "name": "Gray Flycatcher",
@@ -903,6 +974,13 @@
         "P6 emargination": [
           "emarginated"
         ]
+      },
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 0.99,
+        "P6": 0.83,
+        "P5": 0.48,
+        "P4": 0.16
       },
       "code": "GRFL"
     },
@@ -956,6 +1034,13 @@
         "P6 emargination": [
           "emarginated"
         ]
+      },
+      "Length normalized to P8-P3": {
+        "P8": 1.00,
+        "P7": 0.97,
+        "P6": 0.79,
+        "P5": 0.46,
+        "P4": 0.17
       },
       "code": "LEFL"
     },
