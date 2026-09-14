@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f5f1e8">
+    <title>empID | Primary Tip Tool test</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="css/index.css">
+    <style>
+        :root {
+            --workspace: #e8eee8;
+            --workspace-grid: rgba(23, 50, 46, .08);
+            --tool-blue: #9bc5cc;
+            --tool-red: #e0005a;
+        }
+
+        body { min-height: 100vh; }
+        .tool-shell { width: min(1280px, calc(100% - 48px)); margin: 0 auto; padding: 28px 0 24px; }
+        .tool-header { display: flex; align-items: center; gap: 12px; }
+        .tool-header p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+        .tool-header .text-button { margin-left: auto; }
+        .workspace { position: relative; min-height: min(690px, calc(100vh - 170px)); margin-top: 28px; overflow: hidden; border: 1px solid var(--ink); background-color: var(--workspace); background-image: linear-gradient(var(--workspace-grid) 1px, transparent 1px), linear-gradient(90deg, var(--workspace-grid) 1px, transparent 1px); background-size: 32px 32px; }
+        .upload-state { display: grid; place-items: center; min-height: inherit; padding: 40px 20px; }
+        .upload-card { display: grid; justify-items: center; gap: 14px; width: min(440px, 100%); padding: 34px; border: 1px dashed var(--ink); background: rgba(245, 241, 232, .72); text-align: center; cursor: pointer; transition: background .2s, transform .2s; }
+        .upload-card:hover, .upload-card.is-dragging { background: #dcebef; transform: translateY(-3px); }
+        .upload-card:focus-within { outline: 2px solid var(--accent); outline-offset: 4px; }
+        .upload-icon { display: grid; place-items: center; width: 104px; height: 104px; border: 1px solid var(--ink); border-radius: 50%; color: var(--ink); }
+        .upload-icon svg { width: 54px; height: 54px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.25; }
+        .upload-card h2 { font-size: clamp(30px, 5vw, 48px); }
+        .upload-card p { max-width: 310px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+        .upload-card input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+        .canvas-state { position: absolute; inset: 0; }
+        .canvas-state.hidden, .upload-state.hidden { display: none; }
+        .image-stage { position: absolute; inset: 0; transform-origin: 0 0; touch-action: none; }
+        #photo { display: block; width: 100%; height: 100%; object-fit: contain; }
+        .image-stage.is-panning { cursor: grab; }
+        .image-stage.is-panning:active { cursor: grabbing; }
+        .workspace-toolbar { position: absolute; top: 16px; left: 16px; z-index: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 7px; max-width: calc(100% - 32px); padding: 7px; border: 1px solid var(--ink); background: rgba(245, 241, 232, .94); box-shadow: 5px 5px 0 rgba(23, 50, 46, .12); }
+        .workspace-toolbar button { min-width: 78px; min-height: 58px; border: 1px solid var(--ink); border-radius: 0; background: var(--tool-blue); color: var(--ink); font-family: inherit; }
+        .workspace-toolbar button:hover, .workspace-toolbar button.active { background: var(--ink); color: var(--paper); }
+        .workspace-toolbar button:active { cursor: grabbing; }
+        .toolbar-icon { display: block; font: 24px/1 Georgia, serif; }
+        .toolbar-label { display: block; margin-top: 5px; font: 500 10px/1.1 'DM Mono', monospace; text-transform: uppercase; }
+        .workspace-toolbar .separator { height: 38px; background: var(--line); }
+        .workspace-toolbar .status { min-width: 180px; padding: 0 7px; color: var(--muted); font: 500 11px/1.35 'DM Mono', monospace; text-transform: uppercase; }
+        .workspace-toolbar button:disabled { cursor: not-allowed; opacity: .45; }
+        .post-confirm { display: none; }
+        .confirmed .setup-tool { display: none; }
+        .confirmed .post-confirm { display: inline-flex; }
+        #vectorLayer { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; touch-action: none; }
+        .vector-line { stroke: var(--tool-red); stroke-width: 3; fill: none; marker-end: url(#vectorArrow); cursor: grab; }
+        .vector-line:active { cursor: grabbing; }
+        .vector-chord-hit { stroke: transparent; stroke-width: 24; fill: none; pointer-events: all; cursor: grab; }
+        .vector-chord-hit:active { cursor: grabbing; }
+        .vector-handle { fill: var(--paper); stroke: var(--tool-red); stroke-width: 3; cursor: grab; pointer-events: none; }
+        .vector-handle:active { cursor: grabbing; }
+        .vector-hit { fill: transparent; stroke: transparent; stroke-width: 0; cursor: grab; pointer-events: all; }
+        .vector-hit:active { cursor: grabbing; }
+        .vector-anchor { fill: transparent; }
+        .tip-line { stroke: var(--tool-red); stroke-width: 2; stroke-dasharray: 5 5; vector-effect: non-scaling-stroke; }
+        .tip-dot { fill: var(--tool-red); stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
+        .tip-hit { fill: transparent; stroke: transparent; cursor: grab; }
+        .tip-hit:active { cursor: grabbing; }
+        .confirmed .vector-hit, .confirmed .vector-chord-hit { display: none; }
+        .ratio-panel { position: absolute; bottom: 16px; left: 16px; z-index: 3; display: none; width: min(310px, calc(100% - 32px)); max-height: 240px; overflow: auto; padding: 12px; border: 1px solid var(--ink); background: rgba(245, 241, 232, .95); box-shadow: 5px 5px 0 rgba(23, 50, 46, .12); }
+        .confirmed .ratio-panel { display: block; }
+        .ratio-panel h3 { margin: 0 0 5px; font: 800 18px Georgia, serif; }
+        .ratio-panel p { margin: 0 0 9px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+        .ratio-controls { display: flex; gap: 5px; margin-bottom: 8px; }
+        .ratio-controls button { padding: 5px 7px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font: 500 10px 'DM Mono', monospace; text-transform: uppercase; }
+        .ratio-controls button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+        .ratio-row { display: grid; grid-template-columns: 25px 1fr 58px; gap: 7px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); font-size: 12px; }
+        .ratio-row strong { color: var(--tool-red); font: 500 10px 'DM Mono', monospace; }
+        .ratio-row span:last-child { color: var(--muted); font: 500 10px 'DM Mono', monospace; text-align: right; }
+        .helper { position: absolute; right: 16px; bottom: 14px; max-width: 280px; padding: 10px 12px; border-left: 3px solid var(--tool-red); background: rgba(245, 241, 232, .9); color: var(--muted); font-size: 12px; line-height: 1.4; }
+        footer { margin-top: 18px; }
+        @media (max-width: 640px) { html, body { height: 100%; overflow: hidden; overscroll-behavior: none; } .tool-shell { width: min(100% - 28px, 600px); height: 100%; padding-top: 20px; } .tool-header { align-items: flex-start; flex-wrap: wrap; } .tool-header .text-button { width: 100%; margin-left: 0; text-align: left; } .workspace { height: calc(100dvh - 190px); min-height: 0; margin-top: 20px; touch-action: none; } .workspace-toolbar { top: 10px; left: 10px; right: 10px; } .workspace-toolbar .status { min-width: 0; flex: 1; } .workspace-toolbar button { min-width: 70px; touch-action: none; } .workspace-toolbar .zoom-control { display: none; } .helper { right: 10px; bottom: 10px; max-width: calc(100% - 20px); } }
+    </style>
+</head>
+<body>
+    <main class="tool-shell">
+        <header class="tool-header">
+            <div class="brand-mark" aria-hidden="true"><img src="favicon.svg" alt=""></div>
+            <div>
+                <p class="kicker">empID / field mark lab</p>
+                <h1>Primary Tip Tool</h1>
+                <p>Place a wing-top anchor, then mark the primary tips.</p>
+            </div>
+            <a class="text-button" href="index.html">Back to reference</a>
+        </header>
+
+        <section class="workspace" id="workspace" aria-label="Primary tip measurement workspace">
+            <div class="upload-state" id="uploadState">
+                <label class="upload-card" id="uploadCard" for="imageInput">
+                    <span class="upload-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M5 20h14"></path></svg>
+                    </span>
+                    <span class="kicker">Start with a photograph</span>
+                    <h2>Drop an image</h2>
+                    <p>Choose a wing photograph from your device. The image stays in this browser tab and is never uploaded.</p>
+                    <input id="imageInput" type="file" accept="image/*">
+                </label>
+            </div>
+
+            <div class="canvas-state hidden" id="canvasState">
+                <div class="image-stage" id="imageStage">
+                    <img id="photo" alt="Uploaded wing photograph">
+                </div>
+                <svg id="vectorLayer" aria-label="Placed primary vector">
+                    <defs>
+                        <marker id="vectorArrow" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse" viewBox="0 0 12 10" preserveAspectRatio="xMidYMid meet">
+                            <path d="M0,0 L12,5 L0,10 Z" fill="var(--tool-red)"></path>
+                        </marker>
+                    </defs>
+                </svg>
+                <div class="workspace-toolbar" id="toolbar" aria-label="Image tools">
+                    <button id="createVector" class="setup-tool" type="button" draggable="true" aria-pressed="false" title="Create a vector">
+                        <span class="toolbar-icon" aria-hidden="true">↗</span><span class="toolbar-label">Create vector</span>
+                    </button>
+                    <button id="confirmVector" class="setup-tool" type="button" title="Confirm vector">
+                        <span class="toolbar-icon" aria-hidden="true">✓</span><span class="toolbar-label">Confirm vector</span>
+                    </button>
+                    <button id="reuploadImage" class="setup-tool" type="button" title="Replace the current image">
+                        <span class="toolbar-icon" aria-hidden="true">↻</span><span class="toolbar-label">Reupload</span>
+                    </button>
+                    <button id="panImage" class="setup-tool" type="button" aria-pressed="false" title="Pan the image">
+                        <span class="toolbar-icon" aria-hidden="true">✥</span><span class="toolbar-label">Pan</span>
+                    </button>
+                    <button id="zoomOut" class="zoom-control setup-tool" type="button" title="Zoom out">
+                        <span class="toolbar-icon" aria-hidden="true">−</span><span class="toolbar-label">Zoom out</span>
+                    </button>
+                    <span class="zoom-label zoom-control setup-tool" id="zoomLabel">100%</span>
+                    <button id="zoomIn" class="zoom-control setup-tool" type="button" title="Zoom in">
+                        <span class="toolbar-icon" aria-hidden="true">+</span><span class="toolbar-label">Zoom in</span>
+                    </button>
+                    <button id="addTip" class="post-confirm" type="button" draggable="true" aria-pressed="false" title="Add a feather tip">
+                        <span class="toolbar-icon" aria-hidden="true">•</span><span class="toolbar-label">Add feather tip</span>
+                    </button>
+                    <button id="resetTips" class="post-confirm" type="button" title="Delete all plotted feather tips">
+                        <span class="toolbar-icon" aria-hidden="true">×</span><span class="toolbar-label">Reset tips</span>
+                    </button>
+                    <button id="backToVector" class="post-confirm" type="button" title="Return to vector setup">
+                        <span class="toolbar-icon" aria-hidden="true">↶</span><span class="toolbar-label">Back to vector</span>
+                    </button>
+                    <div class="separator" aria-hidden="true"></div>
+                    <span class="status" id="toolStatus" aria-live="polite">Ready to place a vector.</span>
+                </div>
+                <p class="helper" id="helperText">Choose Create vector, then click or tap once on the wing to place a horizontal vector.</p>
+                <section class="ratio-panel" id="ratioPanel" aria-live="polite">
+                    <h3>Likely primary ratios</h3>
+                    <p id="ratioSummary">Place at least five feather tips to compare p7-p6, p6-p5, and p5-p4.</p>
+                    <div class="ratio-controls" role="group" aria-label="Furthest primary ranking">
+                        <button id="rankAuto" type="button" aria-pressed="true">Auto</button>
+                        <button id="rankP8" type="button" aria-pressed="false">Force P8 last</button>
+                        <button id="rankP7" type="button" aria-pressed="false">Force P7 last</button>
+                    </div>
+                    <div id="ratioResults"></div>
+                </section>
+            </div>
+        </section>
+
+        <footer><span>empID / local image workspace</span><span id="imageStatus">No image loaded</span></footer>
+    </main>
+
+    <script>
+        "use strict";
+
+        const workspace = document.querySelector("#workspace");
+        const uploadState = document.querySelector("#uploadState");
+        const canvasState = document.querySelector("#canvasState");
+        const uploadCard = document.querySelector("#uploadCard");
+        const imageInput = document.querySelector("#imageInput");
+        const photo = document.querySelector("#photo");
+        const vectorLayer = document.querySelector("#vectorLayer");
+        const imageStage = document.querySelector("#imageStage");
+        const createVector = document.querySelector("#createVector");
+        const confirmVector = document.querySelector("#confirmVector");
+        const reuploadImage = document.querySelector("#reuploadImage");
+        const addTip = document.querySelector("#addTip");
+        const resetTips = document.querySelector("#resetTips");
+        const backToVector = document.querySelector("#backToVector");
+        const panImage = document.querySelector("#panImage");
+        const zoomOut = document.querySelector("#zoomOut");
+        const zoomIn = document.querySelector("#zoomIn");
+        const zoomLabel = document.querySelector("#zoomLabel");
+        const vectorArrow = document.querySelector("#vectorArrow");
+        const toolStatus = document.querySelector("#toolStatus");
+        const helperText = document.querySelector("#helperText");
+        const imageStatus = document.querySelector("#imageStatus");
+        const ratioSummary = document.querySelector("#ratioSummary");
+        const ratioResults = document.querySelector("#ratioResults");
+        const rankButtons = {
+            auto: document.querySelector("#rankAuto"),
+            p8: document.querySelector("#rankP8"),
+            p7: document.querySelector("#rankP7")
+        };
+        let imageUrl = null;
+        let placementActive = false;
+        let dragPointerId = null;
+        let dragOrigin = null;
+        let dragMoved = false;
+        let suppressClick = false;
+        let activeHandle = null;
+        let activeDragOffset = { x: 0, y: 0 };
+        let dragStartPoint = null;
+        let dragStartVector = null;
+        let viewScale = 1;
+        let panX = 0;
+        let panY = 0;
+        let panPointerId = null;
+        let panOrigin = null;
+        let panStart = null;
+        const panPointers = new Map();
+        let pinchStartDistance = null;
+        let pinchStartScale = 1;
+        let pinchStartMidpoint = null;
+        let pinchStartPan = null;
+        let confirmed = false;
+        let tipPlacementActive = false;
+        let activeTip = null;
+        let tipDragPointerId = null;
+        let tipDragOrigin = null;
+        let tipDragMoved = false;
+        let suppressTipClick = false;
+        let ratioProfiles = [];
+        let rankingMode = "auto";
+
+        function setPanMode(enabled) {
+            panImage.classList.toggle("active", enabled);
+            panImage.setAttribute("aria-pressed", String(enabled));
+            imageStage.classList.toggle("is-panning", enabled);
+        }
+
+        function renderVectorOverlay() {
+            const vector = vectorLayer.querySelector(".vector");
+            if (!vector) return;
+            const rect = workspace.getBoundingClientRect();
+            const toScreen = (x, y) => confirmed ? { x, y } : ({
+                x: (x - rect.width / 2) * viewScale + rect.width / 2 + panX,
+                y: (y - rect.height / 2) * viewScale + rect.height / 2 + panY
+            });
+            const start = toScreen(Number(vector.dataset.startX), Number(vector.dataset.startY));
+            const end = toScreen(Number(vector.dataset.endX), Number(vector.dataset.endY));
+            vector.querySelectorAll(".vector-line, .vector-chord-hit").forEach(line => {
+                line.setAttribute("x1", start.x);
+                line.setAttribute("y1", start.y);
+                line.setAttribute("x2", end.x);
+                line.setAttribute("y2", end.y);
+            });
+            vector.querySelectorAll('[data-handle="start"]').forEach(handle => {
+                handle.setAttribute("cx", start.x);
+                handle.setAttribute("cy", start.y);
+            });
+            vector.querySelectorAll('[data-handle="end"]').forEach(handle => {
+                handle.setAttribute("cx", end.x);
+                handle.setAttribute("cy", end.y);
+            });
+            vector.querySelectorAll(".vector-anchor").forEach(handle => {
+                handle.setAttribute("cx", start.x);
+                handle.setAttribute("cy", start.y);
+            });
+        }
+
+        function renderTips() {
+            vectorLayer.querySelectorAll(".tip-marker").forEach(marker => {
+                const x = Number(marker.dataset.x);
+                const y = Number(marker.dataset.y);
+                const vectorY = Number(marker.dataset.vectorY);
+                marker.querySelector(".tip-line").setAttribute("x1", x);
+                marker.querySelector(".tip-line").setAttribute("y1", y);
+                marker.querySelector(".tip-line").setAttribute("x2", x);
+                marker.querySelector(".tip-line").setAttribute("y2", 2 * vectorY - y);
+                marker.querySelector(".tip-dot").setAttribute("cx", x);
+                marker.querySelector(".tip-dot").setAttribute("cy", y);
+                marker.querySelector(".tip-hit").setAttribute("cx", x);
+                marker.querySelector(".tip-hit").setAttribute("cy", y);
+            });
+            renderRatioResults();
+        }
+
+        function intervalSignature(values) {
+            const intervals = values.slice(1).map((value, index) => value - values[index]).slice(0, 3);
+            const total = intervals.reduce((sum, value) => sum + value, 0);
+            return total ? intervals.map(value => value / total) : null;
+        }
+
+        function measuredSignature(vector, markers, useP8) {
+            const startX = Number(vector.dataset.startX);
+            const endX = Number(vector.dataset.endX);
+            const direction = endX >= startX ? 1 : -1;
+            const ordered = markers.map(marker => ({
+                marker,
+                axis: (Number(marker.dataset.x) - startX) * direction
+            })).sort((a, b) => b.axis - a.axis);
+            const needed = useP8 ? 5 : 4;
+            if (ordered.length < needed) return null;
+            const distances = ordered.slice(0, needed).map(item => item.axis - ordered[0].axis);
+            const span = distances[distances.length - 1];
+            if (!span) return null;
+            const normalized = distances.map(distance => distance / span);
+            const intervals = useP8
+                ? [normalized[2] - normalized[1], normalized[3] - normalized[2], normalized[4] - normalized[3]]
+                : [normalized[1], normalized[2] - normalized[1], normalized[3] - normalized[2]];
+            return intervals;
+        }
+
+        function renderRatioResults() {
+            if (!confirmed) return;
+            const vector = vectorLayer.querySelector(".vector");
+            const markers = [...vectorLayer.querySelectorAll(".tip-marker")];
+            if (!vector || markers.length < 5 || !ratioProfiles.length) {
+                ratioSummary.textContent = `${markers.length}/5 tips placed. Add ${Math.max(0, 5 - markers.length)} more to rank p7-p6, p6-p5, and p5-p4.`;
+                ratioResults.innerHTML = "";
+                return;
+            }
+            const cases = rankingMode === "p8"
+                ? [{ label: "P8 furthest", signature: measuredSignature(vector, markers, true) }]
+                : rankingMode === "p7"
+                    ? [{ label: "P7 furthest", signature: measuredSignature(vector, markers, false) }]
+                    : [
+                        { label: "P8 furthest", signature: measuredSignature(vector, markers, true) },
+                        { label: "P7 furthest", signature: measuredSignature(vector, markers, false) }
+                    ];
+            if (cases.some(testCase => !testCase.signature)) {
+                ratioSummary.textContent = `Not enough tips for ${rankingMode === "p8" ? "P8" : "P7"} ranking.`;
+                ratioResults.innerHTML = "";
+                return;
+            }
+            const ranked = ratioProfiles.flatMap(profile => cases.map(testCase => {
+                const difference = testCase.signature.reduce((sum, value, index) => sum + Math.abs(value - profile.signature[index]), 0);
+                return { ...profile, caseLabel: testCase.label, difference };
+            })).sort((a, b) => a.difference - b.difference).slice(0, 6);
+            const rankingLabel = rankingMode === "auto" ? "both possible furthest-primary assignments" : `${rankingMode.toUpperCase()} furthest assignment`;
+            ratioSummary.textContent = `${markers.length} tips placed. Ranking uses ${rankingLabel}.`;
+            ratioResults.innerHTML = ranked.map((result, index) => `<div class="ratio-row"><strong>${String(index + 1).padStart(2, "0")}</strong><span>${result.name} / ${result.caseLabel}</span><span>${result.difference.toFixed(3)} diff</span></div>`).join("");
+        }
+
+        async function loadRatioProfiles() {
+            try {
+                const response = await fetch("empid_traits.json");
+                if (!response.ok) throw new Error(`Could not load ratio data (${response.status})`);
+                const data = await response.json();
+                ratioProfiles = data.species.flatMap(bird => {
+                    const values = bird["Length normalized to P8-P3"];
+                    if (!values || ["P7", "P6", "P5", "P4"].some(key => typeof values[key] !== "number")) return [];
+                    return [{
+                        name: bird.name,
+                        signature: [values.P7 - values.P6, values.P6 - values.P5, values.P5 - values.P4]
+                    }];
+                }).map(profile => {
+                    const total = profile.signature.reduce((sum, value) => sum + value, 0);
+                    return { ...profile, signature: profile.signature.map(value => value / total) };
+                });
+                renderRatioResults();
+            } catch (error) {
+                ratioSummary.textContent = "Ratio reference data could not be loaded.";
+                console.error(error);
+            }
+        }
+
+        function renderView() {
+            const rect = workspace.getBoundingClientRect();
+            const baseX = panX + rect.width / 2 * (1 - viewScale);
+            const baseY = panY + rect.height / 2 * (1 - viewScale);
+            imageStage.style.transform = `translate(${baseX}px, ${baseY}px) scale(${viewScale})`;
+            renderVectorOverlay();
+            renderTips();
+            vectorArrow.setAttribute("markerWidth", 12);
+            vectorArrow.setAttribute("markerHeight", 10);
+            vectorArrow.setAttribute("refX", 8);
+            vectorArrow.setAttribute("refY", 5);
+            zoomLabel.textContent = `${Math.round(viewScale * 100)}%`;
+        }
+
+        function resetView() {
+            viewScale = 1;
+            panX = 0;
+            panY = 0;
+            renderView();
+        }
+
+        function resetWorkspace() {
+            vectorLayer.querySelector(".vector")?.remove();
+            vectorLayer.querySelectorAll(".tip-marker").forEach(marker => marker.remove());
+            confirmed = false;
+            canvasState.classList.remove("confirmed");
+            tipPlacementActive = false;
+            placementActive = false;
+            activeHandle = null;
+            activeDragOffset = { x: 0, y: 0 };
+            dragStartPoint = null;
+            dragStartVector = null;
+            panPointerId = null;
+            dragPointerId = null;
+            dragOrigin = null;
+            dragMoved = false;
+            panPointers.clear();
+            pinchStartDistance = null;
+            if (imageUrl) URL.revokeObjectURL(imageUrl);
+            imageUrl = null;
+            photo.removeAttribute("src");
+            canvasState.classList.add("hidden");
+            uploadState.classList.remove("hidden");
+            imageInput.value = "";
+            imageStatus.textContent = "No image loaded";
+            ratioResults.innerHTML = "";
+            ratioSummary.textContent = "Place at least five feather tips to compare p7-p6, p6-p5, and p5-p4.";
+            setPanMode(false);
+            resetView();
+            updateToolState("Ready to place a vector.");
+        }
+
+        function setImage(file) {
+            if (!file || !file.type.startsWith("image/")) return;
+            vectorLayer.querySelector(".vector")?.remove();
+            vectorLayer.querySelectorAll(".tip-marker").forEach(marker => marker.remove());
+            confirmed = false;
+            canvasState.classList.remove("confirmed");
+            tipPlacementActive = false;
+            placementActive = false;
+            if (imageUrl) URL.revokeObjectURL(imageUrl);
+            imageUrl = URL.createObjectURL(file);
+            photo.src = imageUrl;
+            resetView();
+            setPanMode(true);
+            uploadState.classList.add("hidden");
+            canvasState.classList.remove("hidden");
+            imageStatus.textContent = `${file.name} / in memory only`;
+        }
+
+        function pointFromEvent(event) {
+            const rect = workspace.getBoundingClientRect();
+            if (confirmed) return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+            return {
+                x: (event.clientX - rect.left - rect.width / 2 - panX) / viewScale + rect.width / 2,
+                y: (event.clientY - rect.top - rect.height / 2 - panY) / viewScale + rect.height / 2
+            };
+        }
+
+        function visibleImageBounds() {
+            const rect = workspace.getBoundingClientRect();
+            return {
+                left: (0 - rect.width / 2 - panX) / viewScale + rect.width / 2,
+                right: (rect.width - rect.width / 2 - panX) / viewScale + rect.width / 2,
+                top: (0 - rect.height / 2 - panY) / viewScale + rect.height / 2,
+                bottom: (rect.height - rect.height / 2 - panY) / viewScale + rect.height / 2
+            };
+        }
+
+        function fitVectorStart(point) {
+            const bounds = visibleImageBounds();
+            const maximumLength = 150;
+            const edgePadding = 18 / viewScale;
+            const minimumLength = 40 / viewScale;
+            const rightLimit = Math.min(vectorLayer.clientWidth - edgePadding, bounds.right - edgePadding);
+            const start = {
+                x: Math.min(Math.max(point.x, bounds.left + edgePadding), rightLimit - minimumLength),
+                y: Math.min(Math.max(point.y, bounds.top + edgePadding), bounds.bottom - edgePadding)
+            };
+            return { x: start.x, y: start.y, rightLimit, maximumLength, minimumLength };
+        }
+
+        function svgElement(name, attributes) {
+            const element = document.createElementNS("http://www.w3.org/2000/svg", name);
+            Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+            return element;
+        }
+
+        function updateVector(vector, start, end) {
+            vector.dataset.startX = start.x;
+            vector.dataset.startY = start.y;
+            vector.dataset.endX = end.x;
+            vector.dataset.endY = end.y;
+            if (!confirmed) {
+                vector.dataset.setupStartX = start.x;
+                vector.dataset.setupStartY = start.y;
+                vector.dataset.setupEndX = end.x;
+                vector.dataset.setupEndY = end.y;
+            }
+            renderVectorOverlay();
+        }
+
+        function addVector(point) {
+            if (vectorLayer.querySelector(".vector")) return false;
+            const fit = fitVectorStart(point);
+            const start = { x: fit.x, y: fit.y };
+            const end = { x: Math.min(start.x + fit.maximumLength, fit.rightLimit), y: start.y };
+            const group = svgElement("g", { class: "vector" });
+            group.dataset.startX = start.x;
+            group.dataset.startY = start.y;
+            group.dataset.endX = end.x;
+            group.dataset.endY = end.y;
+            group.dataset.setupStartX = start.x;
+            group.dataset.setupStartY = start.y;
+            group.dataset.setupEndX = end.x;
+            group.dataset.setupEndY = end.y;
+            group.append(svgElement("line", { class: "vector-chord-hit" }));
+            group.append(svgElement("line", { class: "vector-line", "marker-end": "url(#vectorArrow)" }));
+            group.append(svgElement("circle", { class: "vector-handle vector-anchor", cx: start.x, cy: start.y, r: 7 }));
+            group.append(svgElement("circle", { class: "vector-hit", "data-handle": "start", cx: start.x, cy: start.y, r: 18 }));
+            group.append(svgElement("circle", { class: "vector-hit", "data-handle": "end", cx: end.x, cy: end.y, r: 18 }));
+            vectorLayer.append(group);
+            renderView();
+            return true;
+        }
+
+        function replaceVectorAt(point) {
+            vectorLayer.querySelector(".vector")?.remove();
+            addVector(point);
+            placementActive = false;
+            setPanMode(true);
+            updateToolState("Vector placed. Drag either endpoint to adjust it.");
+            helperText.textContent = "Drag either endpoint to adjust the wing-top anchor or primary tip.";
+        }
+
+        function updateToolState(message) {
+            toolStatus.textContent = message;
+            createVector.disabled = false;
+            confirmVector.disabled = !vectorLayer.querySelector(".vector") || confirmed;
+            const tipCount = vectorLayer.querySelectorAll(".tip-marker").length;
+            if (tipCount >= 6) {
+                tipPlacementActive = false;
+                addTip.classList.remove("active");
+                addTip.setAttribute("aria-pressed", "false");
+            }
+            addTip.disabled = !confirmed || tipCount >= 6;
+            createVector.classList.toggle("active", placementActive);
+            createVector.setAttribute("aria-pressed", String(placementActive));
+        }
+
+        function beginPlacement() {
+            if (confirmed) return;
+            vectorLayer.querySelector(".vector")?.remove();
+            activeHandle = null;
+            setPanMode(false);
+            placementActive = true;
+            updateToolState("Click or tap the top of the wing.");
+            helperText.textContent = "Click or tap once to place the horizontal vector. Drag either endpoint afterward to adjust it.";
+        }
+
+        function addTipAt(point) {
+            const vector = vectorLayer.querySelector(".vector");
+            if (!confirmed || !vector) return false;
+            if (vectorLayer.querySelectorAll(".tip-marker").length >= 6) return false;
+            const duplicate = [...vectorLayer.querySelectorAll(".tip-marker")].some(marker => Math.hypot(Number(marker.dataset.x) - point.x, Number(marker.dataset.y) - point.y) < 28);
+            if (duplicate) return false;
+            const vectorY = Number(vector.dataset.vectorY);
+            const marker = svgElement("g", { class: "tip-marker" });
+            marker.dataset.x = point.x;
+            marker.dataset.y = point.y;
+            marker.dataset.vectorY = vectorY;
+            marker.append(svgElement("line", { class: "tip-line" }));
+            marker.append(svgElement("circle", { class: "tip-dot", r: 7 }));
+            marker.append(svgElement("circle", { class: "tip-hit", "data-tip-handle": "true", r: 22 }));
+            vectorLayer.append(marker);
+            renderTips();
+            return marker;
+        }
+
+        function clearTips() {
+            vectorLayer.querySelectorAll(".tip-marker").forEach(marker => marker.remove());
+            tipPlacementActive = false;
+            activeTip = null;
+            addTip.classList.remove("active");
+            addTip.setAttribute("aria-pressed", "false");
+            updateToolState("Tips reset. Add feather tips.");
+            helperText.textContent = "Add feather tip, then click or drag it onto a primary. Dotted lines mirror across the vector.";
+            renderTips();
+        }
+
+        function setRankingMode(mode) {
+            rankingMode = mode;
+            Object.entries(rankButtons).forEach(([name, button]) => button.setAttribute("aria-pressed", String(name === mode)));
+            renderRatioResults();
+        }
+
+        function beginTipPlacement() {
+            if (!confirmed || addTip.disabled) return;
+            tipPlacementActive = true;
+            addTip.classList.add("active");
+            addTip.setAttribute("aria-pressed", "true");
+            updateToolState("Click or tap to place a feather tip.");
+            helperText.textContent = "Place a tip on either side of the vector. Drag the dot to adjust it afterward.";
+        }
+
+        function confirmCurrentVector() {
+            const vector = vectorLayer.querySelector(".vector");
+            if (!vector || confirmed) return;
+            const start = { x: Number(vector.querySelector(".vector-line").getAttribute("x1")), y: Number(vector.querySelector(".vector-line").getAttribute("y1")) };
+            const end = { x: Number(vector.querySelector(".vector-line").getAttribute("x2")), y: Number(vector.querySelector(".vector-line").getAttribute("y2")) };
+            const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+            const length = Math.hypot(end.x - start.x, end.y - start.y);
+            let rotation = -Math.atan2(end.y - start.y, end.x - start.x);
+            if (rotation > Math.PI / 2) rotation -= Math.PI;
+            if (rotation < -Math.PI / 2) rotation += Math.PI;
+            const targetLength = Math.max(40, workspace.clientWidth - 86);
+            const fitScale = targetLength / Math.max(length, 1);
+            const targetMidpoint = { x: workspace.clientWidth / 2, y: workspace.clientHeight / 2 };
+            const cos = Math.cos(rotation);
+            const sin = Math.sin(rotation);
+            const transformPoint = point => ({
+                x: targetMidpoint.x + (point.x - midpoint.x) * cos * fitScale - (point.y - midpoint.y) * sin * fitScale,
+                y: targetMidpoint.y + (point.x - midpoint.x) * sin * fitScale + (point.y - midpoint.y) * cos * fitScale
+            });
+            const finalStart = transformPoint(start);
+            const finalEnd = transformPoint(end);
+            const rect = workspace.getBoundingClientRect();
+            const baseX = panX + rect.width / 2 * (1 - viewScale);
+            const baseY = panY + rect.height / 2 * (1 - viewScale);
+            imageStage.style.transform = `translate(${targetMidpoint.x}px, ${targetMidpoint.y}px) rotate(${rotation}rad) scale(${fitScale}) translate(${-midpoint.x}px, ${-midpoint.y}px) translate(${baseX}px, ${baseY}px) scale(${viewScale})`;
+            confirmed = true;
+            vector.dataset.startX = finalStart.x;
+            vector.dataset.startY = finalStart.y;
+            vector.dataset.endX = finalEnd.x;
+            vector.dataset.endY = finalEnd.y;
+            vector.dataset.vectorY = (finalStart.y + finalEnd.y) / 2;
+            canvasState.classList.add("confirmed");
+            placementActive = false;
+            tipPlacementActive = false;
+            setPanMode(false);
+            addTip.classList.remove("active");
+            addTip.setAttribute("aria-pressed", "false");
+            renderVectorOverlay();
+            updateToolState("Vector confirmed. Add feather tips.");
+            helperText.textContent = "Add feather tip, then click or drag it onto a primary. Dotted lines mirror across the vector.";
+        }
+
+        function returnToVectorSetup() {
+            const vector = vectorLayer.querySelector(".vector");
+            if (!vector) return;
+            confirmed = false;
+            canvasState.classList.remove("confirmed");
+            vectorLayer.querySelectorAll(".tip-marker").forEach(marker => marker.remove());
+            vector.dataset.startX = vector.dataset.setupStartX;
+            vector.dataset.startY = vector.dataset.setupStartY;
+            vector.dataset.endX = vector.dataset.setupEndX;
+            vector.dataset.endY = vector.dataset.setupEndY;
+            vector.dataset.vectorY = "";
+            tipPlacementActive = false;
+            activeTip = null;
+            addTip.classList.remove("active");
+            addTip.setAttribute("aria-pressed", "false");
+            resetView();
+            placementActive = true;
+            setPanMode(false);
+            renderVectorOverlay();
+            updateToolState("Vector setup restored. Place a new vector.");
+            helperText.textContent = "Place or drag a new vector, then confirm it when ready.";
+        }
+
+        function handleCanvasPointer(event) {
+            if (event.target.closest(".workspace-toolbar")) return;
+            event.preventDefault();
+            const tipHandle = event.target.closest("[data-tip-handle]");
+            if (confirmed && tipHandle) {
+                activeHandle = "tip";
+                activeTip = tipHandle.closest(".tip-marker");
+                dragPointerId = event.pointerId;
+                return;
+            }
+            const handle = event.target.closest("[data-handle]");
+            if (handle) {
+                activeHandle = handle.dataset.handle;
+                dragPointerId = event.pointerId;
+                activeDragOffset = event.pointerType === "touch" ? { x: 0, y: -52 } : { x: 0, y: 0 };
+                return;
+            }
+            const line = event.target.closest(".vector-line, .vector-chord-hit");
+            if (line) {
+                const vector = line.closest(".vector");
+                activeHandle = "chord";
+                dragPointerId = event.pointerId;
+                dragStartPoint = pointFromEvent(event);
+                dragStartVector = {
+                    start: { x: Number(vector.dataset.startX), y: Number(vector.dataset.startY) },
+                    end: { x: Number(vector.dataset.endX), y: Number(vector.dataset.endY) }
+                };
+                return;
+            }
+            if (confirmed && tipPlacementActive) {
+                const marker = addTipAt(pointFromEvent(event));
+                if (marker) {
+                    activeHandle = "tip";
+                    activeTip = marker;
+                    dragPointerId = event.pointerId;
+                }
+                updateToolState("Tip placed. Click or drag to add another feather tip.");
+                return;
+            }
+            if (!placementActive) return;
+            const bounds = visibleImageBounds();
+            const point = pointFromEvent(event);
+            point.x = Math.min(Math.max(point.x, bounds.left), bounds.right);
+            point.y = Math.min(Math.max(point.y, bounds.top), bounds.bottom);
+            addVector(point);
+            placementActive = false;
+            setPanMode(true);
+            updateToolState("Vector placed. Drag either endpoint to adjust it.");
+            helperText.textContent = "Drag either endpoint to adjust the wing-top anchor or primary tip.";
+        }
+
+        createVector.addEventListener("click", () => {
+            if (suppressClick) {
+                suppressClick = false;
+                return;
+            }
+            beginPlacement();
+        });
+        confirmVector.addEventListener("click", confirmCurrentVector);
+        backToVector.addEventListener("click", returnToVectorSetup);
+        addTip.addEventListener("click", () => {
+            if (suppressTipClick) {
+                suppressTipClick = false;
+                return;
+            }
+            beginTipPlacement();
+        });
+        resetTips.addEventListener("click", clearTips);
+        Object.entries(rankButtons).forEach(([mode, button]) => button.addEventListener("click", () => setRankingMode(mode)));
+        vectorLayer.addEventListener("pointerdown", handleCanvasPointer);
+        workspace.addEventListener("dragover", event => event.preventDefault());
+        workspace.addEventListener("drop", event => {
+            event.preventDefault();
+            if (canvasState.classList.contains("hidden")) return;
+            if (confirmed && event.dataTransfer.getData("text/plain") === "add-tip") {
+                addTipAt(pointFromEvent(event));
+                tipPlacementActive = true;
+                updateToolState("Tip placed. Click or drag to add another feather tip.");
+                return;
+            }
+            replaceVectorAt(pointFromEvent(event));
+        });
+        createVector.addEventListener("dragstart", event => event.dataTransfer.setData("text/plain", "create-vector"));
+        addTip.addEventListener("dragstart", event => event.dataTransfer.setData("text/plain", "add-tip"));
+        uploadCard.addEventListener("dragover", event => { event.preventDefault(); uploadCard.classList.add("is-dragging"); });
+        uploadCard.addEventListener("dragleave", () => uploadCard.classList.remove("is-dragging"));
+        uploadCard.addEventListener("drop", event => { event.preventDefault(); uploadCard.classList.remove("is-dragging"); setImage(event.dataTransfer.files[0]); });
+        imageInput.addEventListener("change", event => setImage(event.target.files[0]));
+        reuploadImage.addEventListener("click", () => { resetWorkspace(); imageInput.click(); });
+        panImage.addEventListener("click", () => {
+            setPanMode(true);
+            updateToolState("Pan mode enabled.");
+        });
+        zoomOut.addEventListener("click", () => { viewScale = Math.max(.5, viewScale - .25); renderView(); });
+        zoomIn.addEventListener("click", () => { viewScale = Math.min(3, viewScale + .25); renderView(); });
+        workspace.addEventListener("wheel", event => {
+            if (event.target.closest(".workspace-toolbar")) return;
+            event.preventDefault();
+            if (confirmed) return;
+            viewScale = Math.min(3, Math.max(.5, viewScale + (event.deltaY < 0 ? .1 : -.1)));
+            renderView();
+        }, { passive: false });
+
+        workspace.addEventListener("pointerdown", event => {
+            if (!panImage.matches(".active") || event.target.closest(".workspace-toolbar, [data-handle], .vector-line, .vector-chord-hit")) return;
+            panPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+            if (panPointers.size === 1) {
+                panPointerId = event.pointerId;
+                panOrigin = { x: event.clientX, y: event.clientY };
+                panStart = { x: panX, y: panY };
+            } else if (panPointers.size === 2) {
+                const points = [...panPointers.values()];
+                pinchStartDistance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+                pinchStartScale = viewScale;
+                pinchStartMidpoint = { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 };
+                pinchStartPan = { x: panX, y: panY };
+            }
+            event.preventDefault();
+        });
+
+        createVector.addEventListener("pointerdown", event => {
+            suppressClick = false;
+            dragPointerId = event.pointerId;
+            dragOrigin = { x: event.clientX, y: event.clientY };
+            dragMoved = false;
+            event.preventDefault();
+        });
+        addTip.addEventListener("pointerdown", event => {
+            if (!confirmed) return;
+            suppressTipClick = false;
+            tipDragPointerId = event.pointerId;
+            tipDragOrigin = { x: event.clientX, y: event.clientY };
+            tipDragMoved = false;
+            event.preventDefault();
+        });
+        window.addEventListener("pointermove", event => {
+            if (event.pointerId === tipDragPointerId && tipDragOrigin) {
+                tipDragMoved = tipDragMoved || Math.hypot(event.clientX - tipDragOrigin.x, event.clientY - tipDragOrigin.y) > 20;
+            }
+            if (event.pointerId === dragPointerId && dragOrigin) {
+                dragMoved = dragMoved || Math.hypot(event.clientX - dragOrigin.x, event.clientY - dragOrigin.y) > 20;
+            }
+        });
+        window.addEventListener("pointerup", event => {
+            if (event.pointerId === tipDragPointerId) {
+                if (tipDragMoved && confirmed) {
+                    addTipAt(pointFromEvent(event));
+                    tipPlacementActive = true;
+                    suppressTipClick = true;
+                    updateToolState("Tip placed. Click or drag to add another feather tip.");
+                }
+                tipDragPointerId = null;
+                tipDragOrigin = null;
+                tipDragMoved = false;
+            }
+            if (activeHandle) return;
+            if (event.pointerId !== dragPointerId) return;
+            const rect = workspace.getBoundingClientRect();
+            const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+            if (dragMoved && !canvasState.classList.contains("hidden") && point.x >= 0 && point.x <= rect.width && point.y >= 0 && point.y <= rect.height) {
+                replaceVectorAt(pointFromEvent(event));
+                suppressClick = true;
+            }
+            dragPointerId = null;
+            dragOrigin = null;
+            dragMoved = false;
+        });
+        window.addEventListener("pointermove", event => {
+            if (!panPointers.has(event.pointerId)) return;
+            panPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+            if (panPointers.size === 2 && pinchStartDistance) {
+                const points = [...panPointers.values()];
+                const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+                const midpoint = { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 };
+                viewScale = Math.min(3, Math.max(.5, pinchStartScale * distance / pinchStartDistance));
+                panX = pinchStartPan.x + midpoint.x - pinchStartMidpoint.x;
+                panY = pinchStartPan.y + midpoint.y - pinchStartMidpoint.y;
+                renderView();
+                return;
+            }
+            if (panPointers.size === 1 && event.pointerId === panPointerId && panOrigin) {
+                panX = panStart.x + event.clientX - panOrigin.x;
+                panY = panStart.y + event.clientY - panOrigin.y;
+                renderView();
+            }
+        });
+        window.addEventListener("pointerup", event => {
+            if (!panPointers.has(event.pointerId)) return;
+            panPointers.delete(event.pointerId);
+            if (panPointers.size < 2) pinchStartDistance = null;
+            if (panPointers.size === 1) {
+                const [remainingId, remainingPoint] = panPointers.entries().next().value;
+                panPointerId = remainingId;
+                panOrigin = remainingPoint;
+                panStart = { x: panX, y: panY };
+            } else if (!panPointers.size) {
+                panPointerId = null;
+                panOrigin = null;
+                panStart = null;
+            }
+        });
+        window.addEventListener("pointermove", event => {
+            if (!activeHandle || event.pointerId !== dragPointerId) return;
+            if (activeHandle === "tip") {
+                const point = pointFromEvent(event);
+                activeTip.dataset.x = point.x;
+                activeTip.dataset.y = point.y;
+                renderTips();
+                return;
+            }
+            const vector = vectorLayer.querySelector(".vector");
+            if (!vector) return;
+            const point = pointFromEvent(event);
+            const bounds = visibleImageBounds();
+            point.x += activeDragOffset.x / viewScale;
+            point.y += activeDragOffset.y / viewScale;
+            let start = { x: Number(vector.dataset.startX), y: Number(vector.dataset.startY) };
+            let end = { x: Number(vector.dataset.endX), y: Number(vector.dataset.endY) };
+            if (activeHandle === "chord") {
+                let deltaX = point.x - dragStartPoint.x;
+                let deltaY = point.y - dragStartPoint.y;
+                deltaX = Math.min(Math.max(deltaX, bounds.left - dragStartVector.start.x), bounds.right - dragStartVector.end.x);
+                deltaY = Math.min(Math.max(deltaY, bounds.top - dragStartVector.start.y), bounds.bottom - dragStartVector.end.y);
+                start = { x: dragStartVector.start.x + deltaX, y: dragStartVector.start.y + deltaY };
+                end = { x: dragStartVector.end.x + deltaX, y: dragStartVector.end.y + deltaY };
+            } else {
+                point.x = Math.min(Math.max(point.x, bounds.left), bounds.right);
+                point.y = Math.min(Math.max(point.y, bounds.top), bounds.bottom);
+                if (activeHandle === "start") Object.assign(start, point);
+                if (activeHandle === "end") Object.assign(end, point);
+            }
+            updateVector(vector, start, end);
+        });
+        window.addEventListener("pointerup", event => {
+            if (event.pointerId === dragPointerId && activeHandle) {
+                activeHandle = null;
+                dragPointerId = null;
+                activeDragOffset = { x: 0, y: 0 };
+                dragStartPoint = null;
+                dragStartVector = null;
+            }
+        });
+        loadRatioProfiles();
+    </script>
+</body>
+</html>
