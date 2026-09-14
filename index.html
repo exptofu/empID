@@ -142,14 +142,14 @@
                 <div class="canvas-state hidden" id="canvasState">
                     <div class="image-stage" id="imageStage">
                         <img id="photo" alt="Uploaded wing photograph">
+                        <svg id="vectorLayer" aria-label="Placed primary vector">
+                            <defs>
+                                <marker id="vectorArrow" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse" viewBox="0 0 12 10" preserveAspectRatio="xMidYMid meet">
+                                    <path d="M0,0 L12,5 L0,10 Z" fill="var(--tool-red)"></path>
+                                </marker>
+                            </defs>
+                        </svg>
                     </div>
-                    <svg id="vectorLayer" aria-label="Placed primary vector">
-                        <defs>
-                            <marker id="vectorArrow" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse" viewBox="0 0 12 10" preserveAspectRatio="xMidYMid meet">
-                                <path d="M0,0 L12,5 L0,10 Z" fill="var(--tool-red)"></path>
-                            </marker>
-                        </defs>
-                    </svg>
                     <div class="workspace-toolbar" id="toolbar" aria-label="Image tools">
                         <button id="createVector" class="setup-tool" type="button" draggable="true" aria-pressed="false" title="Create a vector">
                             <span class="toolbar-icon" aria-hidden="true">&#x2197;&#xFE0E;</span><span class="toolbar-label">Create vector</span>

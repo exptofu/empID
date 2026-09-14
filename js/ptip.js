@@ -62,6 +62,10 @@
     let pinchStartMidpoint = null;
     let pinchStartPan = null;
     let confirmed = false;
+    let confirmRotation = 0;
+    let confirmFitScale = 1;
+    let stageWidth = 0;
+    let stageHeight = 0;
     let tipPlacementActive = false;
     let activeTip = null;
     let rawSpeciesData = null;
@@ -84,16 +88,12 @@
         imageStage.classList.toggle("is-panning", enabled);
     }
 
+    // The overlay lives inside #imageStage, so it always shares the same CSS transform as the photo.
     function renderVectorOverlay() {
         const vector = vectorLayer.querySelector(".vector");
         if (!vector) return;
-        const rect = workspace.getBoundingClientRect();
-        const toScreen = (x, y) => confirmed ? { x, y } : ({
-            x: (x - rect.width / 2) * viewScale + rect.width / 2 + panX,
-            y: (y - rect.height / 2) * viewScale + rect.height / 2 + panY
-        });
-        const start = toScreen(Number(vector.dataset.startX), Number(vector.dataset.startY));
-        const end = toScreen(Number(vector.dataset.endX), Number(vector.dataset.endY));
+        const start = { x: Number(vector.dataset.startX), y: Number(vector.dataset.startY) };
+        const end = { x: Number(vector.dataset.endX), y: Number(vector.dataset.endY) };
         vector.querySelectorAll(".vector-line, .vector-chord-hit").forEach(line => {
             line.setAttribute("x1", start.x);
             line.setAttribute("y1", start.y);
@@ -115,14 +115,28 @@
     }
 
     function renderTips() {
+        const vector = vectorLayer.querySelector(".vector");
+        const start = vector ? { x: Number(vector.dataset.startX), y: Number(vector.dataset.startY) } : null;
+        const end = vector ? { x: Number(vector.dataset.endX), y: Number(vector.dataset.endY) } : null;
+        const length = start && end ? Math.hypot(end.x - start.x, end.y - start.y) || 1 : 1;
+        const direction = start && end ? { x: (end.x - start.x) / length, y: (end.y - start.y) / length } : null;
         vectorLayer.querySelectorAll(".tip-marker").forEach(marker => {
             const x = Number(marker.dataset.x);
             const y = Number(marker.dataset.y);
-            const vectorY = Number(marker.dataset.vectorY);
+            let mirrorX = x;
+            let mirrorY = y;
+            if (direction) {
+                // Reflect the tip across the vector's own line so the dotted mirror stays perpendicular even when the vector is rotated.
+                const projection = (x - start.x) * direction.x + (y - start.y) * direction.y;
+                const footX = start.x + direction.x * projection;
+                const footY = start.y + direction.y * projection;
+                mirrorX = 2 * footX - x;
+                mirrorY = 2 * footY - y;
+            }
             marker.querySelector(".tip-line").setAttribute("x1", x);
             marker.querySelector(".tip-line").setAttribute("y1", y);
-            marker.querySelector(".tip-line").setAttribute("x2", x);
-            marker.querySelector(".tip-line").setAttribute("y2", 2 * vectorY - y);
+            marker.querySelector(".tip-line").setAttribute("x2", mirrorX);
+            marker.querySelector(".tip-line").setAttribute("y2", mirrorY);
             marker.querySelector(".tip-dot").setAttribute("cx", x);
             marker.querySelector(".tip-dot").setAttribute("cy", y);
             marker.querySelector(".tip-hit").setAttribute("cx", x);
@@ -224,11 +238,39 @@
         }
     }
 
-    function renderView() {
+    // Reads the live transform applied to #imageStage so pointer math self-corrects after a resize.
+    function stageMatrix() {
+        const transform = getComputedStyle(imageStage).transform;
+        return new DOMMatrix(transform === "none" ? undefined : transform);
+    }
+
+    function setupBaseOffset(rect) {
+        return {
+            x: panX + (rect.width - stageWidth * viewScale) / 2,
+            y: panY + (rect.height - stageHeight * viewScale) / 2
+        };
+    }
+
+    // Recomputes the confirmed vector's fixed rotation/scale around the current viewport center, so a resize simply re-centers it instead of losing alignment.
+    function applyConfirmedTransform() {
+        const vector = vectorLayer.querySelector(".vector");
+        if (!vector) return;
         const rect = workspace.getBoundingClientRect();
-        const baseX = panX + rect.width / 2 * (1 - viewScale);
-        const baseY = panY + rect.height / 2 * (1 - viewScale);
-        imageStage.style.transform = `translate(${baseX}px, ${baseY}px) scale(${viewScale})`;
+        const start = { x: Number(vector.dataset.startX), y: Number(vector.dataset.startY) };
+        const end = { x: Number(vector.dataset.endX), y: Number(vector.dataset.endY) };
+        const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+        const targetMidpoint = { x: rect.width / 2, y: rect.height / 2 };
+        imageStage.style.transform = `translate(${targetMidpoint.x}px, ${targetMidpoint.y}px) rotate(${confirmRotation}rad) scale(${confirmFitScale}) translate(${-midpoint.x}px, ${-midpoint.y}px)`;
+    }
+
+    function renderView() {
+        if (confirmed) {
+            applyConfirmedTransform();
+        } else {
+            const rect = workspace.getBoundingClientRect();
+            const base = setupBaseOffset(rect);
+            imageStage.style.transform = `translate(${base.x}px, ${base.y}px) scale(${viewScale})`;
+        }
         renderVectorOverlay();
         renderTips();
         vectorArrow.setAttribute("markerWidth", 12);
@@ -265,6 +307,8 @@
         if (imageUrl) URL.revokeObjectURL(imageUrl);
         imageUrl = null;
         photo.removeAttribute("src");
+        imageStage.style.width = "";
+        imageStage.style.height = "";
         canvasState.classList.add("hidden");
         uploadState.classList.remove("hidden");
         imageInput.value = "";
@@ -283,6 +327,12 @@
         canvasState.classList.remove("confirmed");
         tipPlacementActive = false;
         placementActive = false;
+        // Fix the stage to the workspace size at upload time so later window resizes only re-center it, never reflow it.
+        const rect = workspace.getBoundingClientRect();
+        stageWidth = rect.width;
+        stageHeight = rect.height;
+        imageStage.style.width = `${stageWidth}px`;
+        imageStage.style.height = `${stageHeight}px`;
         if (imageUrl) URL.revokeObjectURL(imageUrl);
         imageUrl = URL.createObjectURL(file);
         photo.src = imageUrl;
@@ -294,20 +344,20 @@
 
     function pointFromEvent(event) {
         const rect = workspace.getBoundingClientRect();
-        if (confirmed) return { x: event.clientX - rect.left, y: event.clientY - rect.top };
-        return {
-            x: (event.clientX - rect.left - rect.width / 2 - panX) / viewScale + rect.width / 2,
-            y: (event.clientY - rect.top - rect.height / 2 - panY) / viewScale + rect.height / 2
-        };
+        const point = stageMatrix().inverse().transformPoint(new DOMPoint(event.clientX - rect.left, event.clientY - rect.top));
+        return { x: point.x, y: point.y };
     }
 
     function visibleImageBounds() {
         const rect = workspace.getBoundingClientRect();
+        const inverse = stageMatrix().inverse();
+        const topLeft = inverse.transformPoint(new DOMPoint(0, 0));
+        const bottomRight = inverse.transformPoint(new DOMPoint(rect.width, rect.height));
         return {
-            left: (0 - rect.width / 2 - panX) / viewScale + rect.width / 2,
-            right: (rect.width - rect.width / 2 - panX) / viewScale + rect.width / 2,
-            top: (0 - rect.height / 2 - panY) / viewScale + rect.height / 2,
-            bottom: (rect.height - rect.height / 2 - panY) / viewScale + rect.height / 2
+            left: Math.min(topLeft.x, bottomRight.x),
+            right: Math.max(topLeft.x, bottomRight.x),
+            top: Math.min(topLeft.y, bottomRight.y),
+            bottom: Math.max(topLeft.y, bottomRight.y)
         };
     }
 
@@ -378,12 +428,13 @@
     }
 
     function updateToolState(message) {
-        toolStatus.textContent = message;
         const hasVector = Boolean(vectorLayer.querySelector(".vector"));
-        createVector.disabled = false;
-        confirmVector.disabled = !hasVector || confirmed;
         const tipCount = vectorLayer.querySelectorAll(".tip-marker").length;
         if (tipCount >= 6) tipPlacementActive = false;
+        // Once all six primaries (P8-P3) are placed, surface that instead of prompting for another tip.
+        toolStatus.textContent = confirmed && tipCount >= 6 ? "All primary tips placed (P8-P3)." : message;
+        createVector.disabled = false;
+        confirmVector.disabled = !hasVector || confirmed;
         createVector.classList.toggle("active", placementActive);
         createVector.setAttribute("aria-pressed", String(placementActive));
         // Create Vector and Pan share the same toolbar slot: only one exists at a time.
@@ -408,11 +459,9 @@
         if (vectorLayer.querySelectorAll(".tip-marker").length >= 6) return false;
         const duplicate = [...vectorLayer.querySelectorAll(".tip-marker")].some(marker => Math.hypot(Number(marker.dataset.x) - point.x, Number(marker.dataset.y) - point.y) < 28);
         if (duplicate) return false;
-        const vectorY = Number(vector.dataset.vectorY);
         const marker = svgElement("g", { class: "tip-marker" });
         marker.dataset.x = point.x;
         marker.dataset.y = point.y;
-        marker.dataset.vectorY = vectorY;
         marker.append(svgElement("line", { class: "tip-line" }));
         marker.append(svgElement("circle", { class: "tip-dot", r: 7 }));
         marker.append(svgElement("circle", { class: "tip-hit", "data-tip-handle": "true", r: 22 }));
@@ -444,9 +493,9 @@
     function confirmCurrentVector() {
         const vector = vectorLayer.querySelector(".vector");
         if (!vector || confirmed) return;
-        const start = { x: Number(vector.querySelector(".vector-line").getAttribute("x1")), y: Number(vector.querySelector(".vector-line").getAttribute("y1")) };
-        const end = { x: Number(vector.querySelector(".vector-line").getAttribute("x2")), y: Number(vector.querySelector(".vector-line").getAttribute("y2")) };
-        const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+        // The vector's stage-local coordinates already track the photo under any pan/zoom (they share imageStage's transform), so no baking is needed here.
+        const start = { x: Number(vector.dataset.startX), y: Number(vector.dataset.startY) };
+        const end = { x: Number(vector.dataset.endX), y: Number(vector.dataset.endY) };
         const length = Math.hypot(end.x - start.x, end.y - start.y);
         let rotation = -Math.atan2(end.y - start.y, end.x - start.x);
         if (rotation > Math.PI / 2) rotation -= Math.PI;
@@ -454,29 +503,17 @@
         const targetLength = Math.max(40, workspace.clientWidth - 86);
         // Cap magnification so a short vector doesn't blow the photo up past readable resolution.
         const fitScale = Math.min(2.5, targetLength / Math.max(length, 1));
-        const targetMidpoint = { x: workspace.clientWidth / 2, y: workspace.clientHeight / 2 };
-        const cos = Math.cos(rotation);
-        const sin = Math.sin(rotation);
-        const transformPoint = point => ({
-            x: targetMidpoint.x + (point.x - midpoint.x) * cos * fitScale - (point.y - midpoint.y) * sin * fitScale,
-            y: targetMidpoint.y + (point.x - midpoint.x) * sin * fitScale + (point.y - midpoint.y) * cos * fitScale
-        });
-        const finalStart = transformPoint(start);
-        const finalEnd = transformPoint(end);
-        const rect = workspace.getBoundingClientRect();
-        const baseX = panX + rect.width / 2 * (1 - viewScale);
-        const baseY = panY + rect.height / 2 * (1 - viewScale);
-        imageStage.style.transform = `translate(${targetMidpoint.x}px, ${targetMidpoint.y}px) rotate(${rotation}rad) scale(${fitScale}) translate(${-midpoint.x}px, ${-midpoint.y}px) translate(${baseX}px, ${baseY}px) scale(${viewScale})`;
         confirmed = true;
-        vector.dataset.startX = finalStart.x;
-        vector.dataset.startY = finalStart.y;
-        vector.dataset.endX = finalEnd.x;
-        vector.dataset.endY = finalEnd.y;
-        vector.dataset.vectorY = (finalStart.y + finalEnd.y) / 2;
+        confirmRotation = rotation;
+        confirmFitScale = fitScale;
+        panX = 0;
+        panY = 0;
+        viewScale = 1;
         canvasState.classList.add("confirmed");
         placementActive = false;
         tipPlacementActive = true;
         setPanMode(false);
+        applyConfirmedTransform();
         renderVectorOverlay();
         updateToolState("Tip mode active. Click or tap to place a feather tip.");
         helperText.textContent = "Add feather tip, then click or drag it onto a primary. Dotted lines mirror across the vector.";
@@ -496,11 +533,12 @@
         tipPlacementActive = false;
         activeTip = null;
         resetView();
-        placementActive = true;
-        setPanMode(false);
+        // The prior vector is restored as-is; let the user drag its endpoints or reset it, rather than forcing a fresh placement.
+        placementActive = false;
+        setPanMode(true);
         renderVectorOverlay();
-        updateToolState("Vector setup restored. Place a new vector.");
-        helperText.textContent = "Place or drag a new vector, then confirm it when ready.";
+        updateToolState("Vector setup restored. Adjust it or reset to start over.");
+        helperText.textContent = "Drag either endpoint to adjust the vector, or reset it to place a new one.";
     }
 
     function handleCanvasPointer(event) {
@@ -598,14 +636,22 @@
         setPanMode(true);
         updateToolState("Pan mode enabled.");
     });
-    zoomOut.addEventListener("click", () => { viewScale = Math.max(.5, viewScale - .25); renderView(); });
-    zoomIn.addEventListener("click", () => { viewScale = Math.min(3, viewScale + .25); renderView(); });
+    // Rescale pan proportionally so the point currently centered in the viewport stays centered after zooming.
+    function setViewScale(newScale) {
+        const clamped = Math.min(3, Math.max(.5, newScale));
+        const ratio = clamped / viewScale;
+        panX *= ratio;
+        panY *= ratio;
+        viewScale = clamped;
+        renderView();
+    }
+    zoomOut.addEventListener("click", () => setViewScale(viewScale - .25));
+    zoomIn.addEventListener("click", () => setViewScale(viewScale + .25));
     workspace.addEventListener("wheel", event => {
         if (event.target.closest(".workspace-toolbar, .ratio-panel")) return;
         event.preventDefault();
         if (confirmed) return;
-        viewScale = Math.min(3, Math.max(.5, viewScale + (event.deltaY < 0 ? .1 : -.1)));
-        renderView();
+        setViewScale(viewScale + (event.deltaY < 0 ? .1 : -.1));
     }, { passive: false });
 
     workspace.addEventListener("pointerdown", event => {
@@ -740,6 +786,11 @@
             dragStartVector = null;
         }
     });
+
+    // Re-center the fixed-size stage whenever the workspace is resized, instead of letting the photo silently reflow.
+    new ResizeObserver(() => {
+        if (!canvasState.classList.contains("hidden")) renderView();
+    }).observe(workspace);
 
     window.ptipTool = { open: openTool, close: closeTool, refreshRatioProfiles: buildRatioProfiles, onRegionChange: syncRegionButtons };
 
