@@ -3,6 +3,27 @@
     --workspace-grid: rgba(23, 50, 46, .08);
     --tool-blue: #9bc5cc;
     --tool-red: #e0005a;
+    --tool-surface: rgba(245, 241, 232, .94);
+    --tool-card: rgba(245, 241, 232, .72);
+    --tool-panel: rgba(245, 241, 232, .95);
+    --tool-helper: rgba(245, 241, 232, .9);
+    --tool-shadow: rgba(23, 50, 46, .12);
+    --tool-hover: #dcebef;
+    --tool-action: #ffd23f;
+    --tool-action-text: var(--ink);
+}
+
+.dark-mode {
+    --workspace: #202d29;
+    --workspace-grid: rgba(232, 238, 233, .08);
+    --tool-blue: #315763;
+    --tool-surface: rgba(24, 33, 31, .94);
+    --tool-card: rgba(24, 33, 31, .82);
+    --tool-panel: rgba(24, 33, 31, .96);
+    --tool-helper: rgba(24, 33, 31, .92);
+    --tool-shadow: rgba(0, 0, 0, .28);
+    --tool-hover: #29464d;
+    --tool-action-text: #18211f;
 }
 
 body.ptip-open { overflow: hidden; }
@@ -12,8 +33,8 @@ body.ptip-open { overflow: hidden; }
 .ptip-tool .tool-header, .ptip-tool footer { display: none; }
 .ptip-tool .workspace { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; overflow: hidden; border: 0; background-color: var(--workspace); background-image: linear-gradient(var(--workspace-grid) 1px, transparent 1px), linear-gradient(90deg, var(--workspace-grid) 1px, transparent 1px); background-size: 32px 32px; }
 .ptip-tool .upload-state { display: grid; place-items: center; min-height: inherit; padding: 40px 20px; }
-.ptip-tool .upload-card { display: grid; justify-items: center; gap: 14px; width: min(440px, 100%); padding: 34px; border: 1px dashed var(--ink); background: rgba(245, 241, 232, .72); text-align: center; cursor: pointer; transition: background .2s, transform .2s; }
-.ptip-tool .upload-card:hover, .ptip-tool .upload-card.is-dragging { background: #dcebef; transform: translateY(-3px); }
+.ptip-tool .upload-card { display: grid; justify-items: center; gap: 14px; width: min(440px, 100%); padding: 34px; border: 1px dashed var(--ink); background: var(--tool-card); text-align: center; cursor: pointer; transition: background .2s, transform .2s; }
+.ptip-tool .upload-card:hover, .ptip-tool .upload-card.is-dragging { background: var(--tool-hover); transform: translateY(-3px); }
 .ptip-tool .upload-card:focus-within { outline: 2px solid var(--accent); outline-offset: 4px; }
 .ptip-tool .upload-icon { display: grid; place-items: center; width: 104px; height: 104px; border: 1px solid var(--ink); border-radius: 50%; color: var(--ink); }
 .ptip-tool .upload-icon svg { width: 54px; height: 54px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.25; }
@@ -26,8 +47,9 @@ body.ptip-open { overflow: hidden; }
 .ptip-tool #photo { display: block; width: 100%; height: 100%; object-fit: contain; }
 .ptip-tool .image-stage.is-panning { cursor: grab; }
 .ptip-tool .image-stage.is-panning:active { cursor: grabbing; }
-.ptip-tool .workspace-toolbar { position: absolute; top: 16px; left: 16px; z-index: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 7px; max-width: calc(100% - 32px); padding: 7px; border: 1px solid var(--ink); background: rgba(245, 241, 232, .94); box-shadow: 5px 5px 0 rgba(23, 50, 46, .12); }
+.ptip-tool .workspace-toolbar { position: absolute; top: 16px; left: 16px; z-index: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 7px; max-width: calc(100% - 32px); padding: 7px; border: 1px solid var(--ink); background: var(--tool-surface); box-shadow: 5px 5px 0 var(--tool-shadow); }
 .ptip-tool .workspace-toolbar button { min-width: 78px; min-height: 58px; border: 1px solid var(--ink); border-radius: 0; background: var(--tool-blue); color: var(--ink); font-family: inherit; }
+.ptip-tool #confirmVector { background: var(--tool-action); color: var(--tool-action-text); }
 .ptip-tool .workspace-toolbar button:hover, .ptip-tool .workspace-toolbar button.active { background: var(--ink); color: var(--paper); }
 .ptip-tool .workspace-toolbar button:active { cursor: grabbing; }
 .ptip-tool .toolbar-icon { display: block; font: 24px/1 Georgia, serif; }
@@ -52,7 +74,7 @@ body.ptip-open { overflow: hidden; }
 .ptip-tool .tip-hit { fill: transparent; stroke: transparent; cursor: grab; }
 .ptip-tool .tip-hit:active { cursor: grabbing; }
 .ptip-tool .confirmed .vector-hit, .ptip-tool .confirmed .vector-chord-hit { display: none; }
-.ptip-tool .ratio-panel { position: absolute; bottom: 16px; left: 16px; z-index: 3; display: none; width: min(310px, calc(100% - 32px)); max-height: 240px; overflow: auto; padding: 12px; border: 1px solid var(--ink); background: rgba(245, 241, 232, .95); box-shadow: 5px 5px 0 rgba(23, 50, 46, .12); }
+.ptip-tool .ratio-panel { position: absolute; bottom: 16px; left: 16px; z-index: 3; display: none; width: min(310px, calc(100% - 32px)); max-height: 240px; overflow: auto; padding: 12px; border: 1px solid var(--ink); background: var(--tool-panel); box-shadow: 5px 5px 0 var(--tool-shadow); }
 .ptip-tool .confirmed .ratio-panel { display: block; }
 .ptip-tool .ratio-panel h3 { margin: 0 0 5px; font: 800 18px Georgia, serif; }
 .ptip-tool .ratio-panel p { margin: 0 0 9px; color: var(--muted); font-size: 11px; line-height: 1.35; }
@@ -62,9 +84,9 @@ body.ptip-open { overflow: hidden; }
 .ptip-tool .ratio-row { display: grid; grid-template-columns: 25px 1fr 58px; gap: 7px; align-items: baseline; padding: 6px 0 6px 8px; border-top: 1px solid var(--line); border-left: 4px solid var(--match-color, var(--line)); font-size: 12px; }
 .ptip-tool .ratio-row strong { color: var(--tool-red); font: 500 10px 'DM Mono', monospace; }
 .ptip-tool .ratio-row span:last-child { color: var(--muted); font: 500 10px 'DM Mono', monospace; text-align: right; }
-.ptip-tool .helper { position: absolute; right: 16px; bottom: 14px; max-width: 280px; padding: 10px 12px; border-left: 3px solid var(--tool-red); background: rgba(245, 241, 232, .9); color: var(--muted); font-size: 12px; line-height: 1.4; }
-.ptip-tool #backToVector { order: -1; background: #ffd23f; color: var(--ink); border-color: var(--ink); box-shadow: 4px 4px 0 var(--ink); }
-.ptip-tool #backToReference { position: absolute; top: 16px; right: 16px; z-index: 4; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--ink); border-radius: 0; background: rgba(245, 241, 232, .94); color: var(--tool-red); font-family: inherit; box-shadow: 5px 5px 0 rgba(23, 50, 46, .12); }
+.ptip-tool .helper { position: absolute; right: 16px; bottom: 14px; max-width: 280px; padding: 10px 12px; border-left: 3px solid var(--tool-red); background: var(--tool-helper); color: var(--muted); font-size: 12px; line-height: 1.4; }
+.ptip-tool #backToVector { order: -1; background: var(--tool-action); color: var(--tool-action-text); border-color: var(--ink); box-shadow: 4px 4px 0 var(--ink); }
+.ptip-tool #backToReference { position: absolute; top: 16px; right: 16px; z-index: 4; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--ink); border-radius: 0; background: var(--tool-surface); color: var(--tool-red); font-family: inherit; box-shadow: 5px 5px 0 var(--tool-shadow); }
 .ptip-tool #backToReference .toolbar-icon { font: 28px/1 Georgia, serif; color: var(--tool-red); }
 .ptip-tool #backToReference:hover { background: var(--tool-red); color: var(--paper); }
 .ptip-tool #backToReference:hover .toolbar-icon { color: var(--paper); }
