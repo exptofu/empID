@@ -15,12 +15,10 @@
             --tool-red: #e0005a;
         }
 
-        body { min-height: 100vh; }
-        .tool-shell { width: min(1280px, calc(100% - 48px)); margin: 0 auto; padding: 28px 0 24px; }
-        .tool-header { display: flex; align-items: center; gap: 12px; }
-        .tool-header p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
-        .tool-header .text-button { margin-left: auto; }
-        .workspace { position: relative; min-height: min(690px, calc(100vh - 170px)); margin-top: 28px; overflow: hidden; border: 1px solid var(--ink); background-color: var(--workspace); background-image: linear-gradient(var(--workspace-grid) 1px, transparent 1px), linear-gradient(90deg, var(--workspace-grid) 1px, transparent 1px); background-size: 32px 32px; }
+        body { min-height: 100vh; touch-action: manipulation; overflow: hidden; }
+        .tool-shell { width: 100%; height: 100vh; margin: 0; padding: 0; }
+        .tool-header, footer { display: none; }
+        .workspace { position: fixed; inset: 0; width: 100%; height: 100dvh; margin: 0; overflow: hidden; border: 0; background-color: var(--workspace); background-image: linear-gradient(var(--workspace-grid) 1px, transparent 1px), linear-gradient(90deg, var(--workspace-grid) 1px, transparent 1px); background-size: 32px 32px; }
         .upload-state { display: grid; place-items: center; min-height: inherit; padding: 40px 20px; }
         .upload-card { display: grid; justify-items: center; gap: 14px; width: min(440px, 100%); padding: 34px; border: 1px dashed var(--ink); background: rgba(245, 241, 232, .72); text-align: center; cursor: pointer; transition: background .2s, transform .2s; }
         .upload-card:hover, .upload-card.is-dragging { background: #dcebef; transform: translateY(-3px); }
@@ -57,7 +55,6 @@
         .vector-handle:active { cursor: grabbing; }
         .vector-hit { fill: transparent; stroke: transparent; stroke-width: 0; cursor: grab; pointer-events: all; }
         .vector-hit:active { cursor: grabbing; }
-        .vector-anchor { fill: transparent; }
         .tip-line { stroke: var(--tool-red); stroke-width: 2; stroke-dasharray: 5 5; vector-effect: non-scaling-stroke; }
         .tip-dot { fill: var(--tool-red); stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
         .tip-hit { fill: transparent; stroke: transparent; cursor: grab; }
@@ -74,8 +71,10 @@
         .ratio-row strong { color: var(--tool-red); font: 500 10px 'DM Mono', monospace; }
         .ratio-row span:last-child { color: var(--muted); font: 500 10px 'DM Mono', monospace; text-align: right; }
         .helper { position: absolute; right: 16px; bottom: 14px; max-width: 280px; padding: 10px 12px; border-left: 3px solid var(--tool-red); background: rgba(245, 241, 232, .9); color: var(--muted); font-size: 12px; line-height: 1.4; }
-        footer { margin-top: 18px; }
-        @media (max-width: 640px) { html, body { height: 100%; overflow: hidden; overscroll-behavior: none; } .tool-shell { width: min(100% - 28px, 600px); height: 100%; padding-top: 20px; } .tool-header { align-items: flex-start; flex-wrap: wrap; } .tool-header .text-button { width: 100%; margin-left: 0; text-align: left; } .workspace { height: calc(100dvh - 190px); min-height: 0; margin-top: 20px; touch-action: none; } .workspace-toolbar { top: 10px; left: 10px; right: 10px; } .workspace-toolbar .status { min-width: 0; flex: 1; } .workspace-toolbar button { min-width: 70px; touch-action: none; } .workspace-toolbar .zoom-control { display: none; } .helper { right: 10px; bottom: 10px; max-width: calc(100% - 20px); } }
+        #backToVector { order: -1; background: #ffd23f; color: var(--ink); border-color: var(--ink); box-shadow: 4px 4px 0 var(--ink); }
+        #backToReference { position: absolute; top: 16px; right: 16px; z-index: 4; display: inline-flex; flex-direction: column; align-items: center; min-width: 78px; min-height: 58px; padding: 7px; border: 1px solid var(--ink); border-radius: 0; background: #ffd23f; color: var(--ink); font-family: inherit; box-shadow: 5px 5px 0 rgba(23, 50, 46, .12); }
+        #backToReference:hover { background: var(--ink); color: var(--paper); }
+        @media (max-width: 640px) { .workspace-toolbar { top: 10px; left: 10px; right: 10px; } .workspace-toolbar .status { min-width: 0; flex: 1; } .workspace-toolbar button { min-width: 70px; touch-action: none; } .workspace-toolbar .zoom-control { display: none; } .helper { right: 10px; bottom: 10px; max-width: calc(100% - 20px); } .confirmed .helper { top: 84px; right: 10px; bottom: auto; left: 10px; max-width: none; } .confirmed .ratio-panel { bottom: 10px; max-height: 34dvh; } #backToReference { top: 10px; right: 10px; } }
     </style>
 </head>
 <body>
@@ -91,6 +90,9 @@
         </header>
 
         <section class="workspace" id="workspace" aria-label="Primary tip measurement workspace">
+            <button id="backToReference" type="button" title="Back to reference">
+                <span class="toolbar-icon" aria-hidden="true">←</span><span class="toolbar-label">Back</span>
+            </button>
             <div class="upload-state" id="uploadState">
                 <label class="upload-card" id="uploadCard" for="imageInput">
                     <span class="upload-icon" aria-hidden="true">
@@ -134,14 +136,11 @@
                     <button id="zoomIn" class="zoom-control setup-tool" type="button" title="Zoom in">
                         <span class="toolbar-icon" aria-hidden="true">+</span><span class="toolbar-label">Zoom in</span>
                     </button>
-                    <button id="addTip" class="post-confirm" type="button" draggable="true" aria-pressed="false" title="Add a feather tip">
-                        <span class="toolbar-icon" aria-hidden="true">•</span><span class="toolbar-label">Add feather tip</span>
-                    </button>
                     <button id="resetTips" class="post-confirm" type="button" title="Delete all plotted feather tips">
                         <span class="toolbar-icon" aria-hidden="true">×</span><span class="toolbar-label">Reset tips</span>
                     </button>
-                    <button id="backToVector" class="post-confirm" type="button" title="Return to vector setup">
-                        <span class="toolbar-icon" aria-hidden="true">↶</span><span class="toolbar-label">Back to vector</span>
+                    <button id="backToVector" class="post-confirm" type="button" title="Back to vector setup" aria-label="Back to vector setup">
+                        <span class="toolbar-icon" aria-hidden="true">←</span><span class="toolbar-label">Back to vector</span>
                     </button>
                     <div class="separator" aria-hidden="true"></div>
                     <span class="status" id="toolStatus" aria-live="polite">Ready to place a vector.</span>
@@ -176,8 +175,8 @@
         const imageStage = document.querySelector("#imageStage");
         const createVector = document.querySelector("#createVector");
         const confirmVector = document.querySelector("#confirmVector");
+        const backToReference = document.querySelector("#backToReference");
         const reuploadImage = document.querySelector("#reuploadImage");
-        const addTip = document.querySelector("#addTip");
         const resetTips = document.querySelector("#resetTips");
         const backToVector = document.querySelector("#backToVector");
         const panImage = document.querySelector("#panImage");
@@ -205,6 +204,9 @@
         let activeDragOffset = { x: 0, y: 0 };
         let dragStartPoint = null;
         let dragStartVector = null;
+        let creatingVector = false;
+        let creationPointerOrigin = null;
+        let creationDefaultEnd = null;
         let viewScale = 1;
         let panX = 0;
         let panY = 0;
@@ -219,10 +221,6 @@
         let confirmed = false;
         let tipPlacementActive = false;
         let activeTip = null;
-        let tipDragPointerId = null;
-        let tipDragOrigin = null;
-        let tipDragMoved = false;
-        let suppressTipClick = false;
         let ratioProfiles = [];
         let rankingMode = "auto";
 
@@ -519,12 +517,7 @@
             createVector.disabled = false;
             confirmVector.disabled = !vectorLayer.querySelector(".vector") || confirmed;
             const tipCount = vectorLayer.querySelectorAll(".tip-marker").length;
-            if (tipCount >= 6) {
-                tipPlacementActive = false;
-                addTip.classList.remove("active");
-                addTip.setAttribute("aria-pressed", "false");
-            }
-            addTip.disabled = !confirmed || tipCount >= 6;
+            if (tipCount >= 6) tipPlacementActive = false;
             createVector.classList.toggle("active", placementActive);
             createVector.setAttribute("aria-pressed", String(placementActive));
         }
@@ -562,8 +555,6 @@
             vectorLayer.querySelectorAll(".tip-marker").forEach(marker => marker.remove());
             tipPlacementActive = false;
             activeTip = null;
-            addTip.classList.remove("active");
-            addTip.setAttribute("aria-pressed", "false");
             updateToolState("Tips reset. Add feather tips.");
             helperText.textContent = "Add feather tip, then click or drag it onto a primary. Dotted lines mirror across the vector.";
             renderTips();
@@ -573,15 +564,6 @@
             rankingMode = mode;
             Object.entries(rankButtons).forEach(([name, button]) => button.setAttribute("aria-pressed", String(name === mode)));
             renderRatioResults();
-        }
-
-        function beginTipPlacement() {
-            if (!confirmed || addTip.disabled) return;
-            tipPlacementActive = true;
-            addTip.classList.add("active");
-            addTip.setAttribute("aria-pressed", "true");
-            updateToolState("Click or tap to place a feather tip.");
-            helperText.textContent = "Place a tip on either side of the vector. Drag the dot to adjust it afterward.";
         }
 
         function confirmCurrentVector() {
@@ -595,7 +577,8 @@
             if (rotation > Math.PI / 2) rotation -= Math.PI;
             if (rotation < -Math.PI / 2) rotation += Math.PI;
             const targetLength = Math.max(40, workspace.clientWidth - 86);
-            const fitScale = targetLength / Math.max(length, 1);
+            // Cap magnification so a short vector doesn't blow the photo up past readable resolution.
+            const fitScale = Math.min(2.5, targetLength / Math.max(length, 1));
             const targetMidpoint = { x: workspace.clientWidth / 2, y: workspace.clientHeight / 2 };
             const cos = Math.cos(rotation);
             const sin = Math.sin(rotation);
@@ -617,12 +600,10 @@
             vector.dataset.vectorY = (finalStart.y + finalEnd.y) / 2;
             canvasState.classList.add("confirmed");
             placementActive = false;
-            tipPlacementActive = false;
+            tipPlacementActive = true;
             setPanMode(false);
-            addTip.classList.remove("active");
-            addTip.setAttribute("aria-pressed", "false");
             renderVectorOverlay();
-            updateToolState("Vector confirmed. Add feather tips.");
+            updateToolState("Tip mode active. Click or tap to place a feather tip.");
             helperText.textContent = "Add feather tip, then click or drag it onto a primary. Dotted lines mirror across the vector.";
         }
 
@@ -639,8 +620,6 @@
             vector.dataset.vectorY = "";
             tipPlacementActive = false;
             activeTip = null;
-            addTip.classList.remove("active");
-            addTip.setAttribute("aria-pressed", "false");
             resetView();
             placementActive = true;
             setPanMode(false);
@@ -694,10 +673,16 @@
             point.x = Math.min(Math.max(point.x, bounds.left), bounds.right);
             point.y = Math.min(Math.max(point.y, bounds.top), bounds.bottom);
             addVector(point);
-            placementActive = false;
-            setPanMode(true);
-            updateToolState("Vector placed. Drag either endpoint to adjust it.");
-            helperText.textContent = "Drag either endpoint to adjust the wing-top anchor or primary tip.";
+            // Let the end point follow the pointer; a quick tap (see pointerup) reverts to the default length.
+            const placedVector = vectorLayer.querySelector(".vector");
+            creatingVector = true;
+            creationPointerOrigin = { x: event.clientX, y: event.clientY };
+            creationDefaultEnd = { x: Number(placedVector.dataset.endX), y: Number(placedVector.dataset.endY) };
+            activeHandle = "end";
+            dragPointerId = event.pointerId;
+            activeDragOffset = { x: 0, y: 0 };
+            updateToolState("Drag to set the vector length, or release for the default.");
+            helperText.textContent = "Drag to the far wing tip, or release to place a default-length vector.";
         }
 
         createVector.addEventListener("click", () => {
@@ -709,13 +694,7 @@
         });
         confirmVector.addEventListener("click", confirmCurrentVector);
         backToVector.addEventListener("click", returnToVectorSetup);
-        addTip.addEventListener("click", () => {
-            if (suppressTipClick) {
-                suppressTipClick = false;
-                return;
-            }
-            beginTipPlacement();
-        });
+        backToReference.addEventListener("click", () => { window.location.href = "index.html"; });
         resetTips.addEventListener("click", clearTips);
         Object.entries(rankButtons).forEach(([mode, button]) => button.addEventListener("click", () => setRankingMode(mode)));
         vectorLayer.addEventListener("pointerdown", handleCanvasPointer);
@@ -732,7 +711,6 @@
             replaceVectorAt(pointFromEvent(event));
         });
         createVector.addEventListener("dragstart", event => event.dataTransfer.setData("text/plain", "create-vector"));
-        addTip.addEventListener("dragstart", event => event.dataTransfer.setData("text/plain", "add-tip"));
         uploadCard.addEventListener("dragover", event => { event.preventDefault(); uploadCard.classList.add("is-dragging"); });
         uploadCard.addEventListener("dragleave", () => uploadCard.classList.remove("is-dragging"));
         uploadCard.addEventListener("drop", event => { event.preventDefault(); uploadCard.classList.remove("is-dragging"); setImage(event.dataTransfer.files[0]); });
@@ -776,34 +754,12 @@
             dragMoved = false;
             event.preventDefault();
         });
-        addTip.addEventListener("pointerdown", event => {
-            if (!confirmed) return;
-            suppressTipClick = false;
-            tipDragPointerId = event.pointerId;
-            tipDragOrigin = { x: event.clientX, y: event.clientY };
-            tipDragMoved = false;
-            event.preventDefault();
-        });
         window.addEventListener("pointermove", event => {
-            if (event.pointerId === tipDragPointerId && tipDragOrigin) {
-                tipDragMoved = tipDragMoved || Math.hypot(event.clientX - tipDragOrigin.x, event.clientY - tipDragOrigin.y) > 20;
-            }
             if (event.pointerId === dragPointerId && dragOrigin) {
                 dragMoved = dragMoved || Math.hypot(event.clientX - dragOrigin.x, event.clientY - dragOrigin.y) > 20;
             }
         });
         window.addEventListener("pointerup", event => {
-            if (event.pointerId === tipDragPointerId) {
-                if (tipDragMoved && confirmed) {
-                    addTipAt(pointFromEvent(event));
-                    tipPlacementActive = true;
-                    suppressTipClick = true;
-                    updateToolState("Tip placed. Click or drag to add another feather tip.");
-                }
-                tipDragPointerId = null;
-                tipDragOrigin = null;
-                tipDragMoved = false;
-            }
             if (activeHandle) return;
             if (event.pointerId !== dragPointerId) return;
             const rect = workspace.getBoundingClientRect();
@@ -884,6 +840,21 @@
         });
         window.addEventListener("pointerup", event => {
             if (event.pointerId === dragPointerId && activeHandle) {
+                if (creatingVector) {
+                    const distance = Math.hypot(event.clientX - creationPointerOrigin.x, event.clientY - creationPointerOrigin.y);
+                    const vector = vectorLayer.querySelector(".vector");
+                    if (vector && distance < 20) {
+                        const start = { x: Number(vector.dataset.startX), y: Number(vector.dataset.startY) };
+                        updateVector(vector, start, creationDefaultEnd);
+                    }
+                    creatingVector = false;
+                    creationPointerOrigin = null;
+                    creationDefaultEnd = null;
+                    placementActive = false;
+                    setPanMode(true);
+                    updateToolState("Vector placed. Drag either endpoint to adjust it.");
+                    helperText.textContent = "Drag either endpoint to adjust the wing-top anchor or primary tip.";
+                }
                 activeHandle = null;
                 dragPointerId = null;
                 activeDragOffset = { x: 0, y: 0 };

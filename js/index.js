@@ -90,6 +90,13 @@ function isInActiveRegion(bird) {
     return activeRegion === "all" || bird.regions.includes(activeRegion);
 }
 
+// Lets js/ptip.js filter its reference species by the same east/west/all toggle.
+window.empidRegionFilter = {
+    getActiveRegion: () => activeRegion,
+    isSpeciesInActiveRegion: name => activeRegion === "all" || (regionsBySpecies[name] || []).includes(activeRegion),
+    setActiveRegion: region => setActiveRegion(region)
+};
+
 function renderReference(nameFilter = "", selectedTrait = "") {
     const query = nameFilter.trim().toLowerCase();
     const [category, value] = selectedTrait.split("::");
@@ -204,6 +211,8 @@ function setActiveRegion(region) {
     });
     renderReference(speciesFilter.value, traitFilter.value);
     updateResults();
+    window.ptipTool?.refreshRatioProfiles?.();
+    window.ptipTool?.onRegionChange?.(region);
 }
 
 function setDarkMode(enabled) {

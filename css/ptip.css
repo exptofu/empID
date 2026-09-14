@@ -1,0 +1,80 @@
+:root {
+    --workspace: #e8eee8;
+    --workspace-grid: rgba(23, 50, 46, .08);
+    --tool-blue: #9bc5cc;
+    --tool-red: #e0005a;
+}
+
+body.ptip-open { overflow: hidden; }
+.ptip-tool { position: fixed; inset: 0; z-index: 1000; display: none; touch-action: manipulation; background: var(--paper); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.ptip-tool.open { display: block; }
+.ptip-tool .tool-shell { width: 100%; height: 100%; margin: 0; padding: 0; }
+.ptip-tool .tool-header, .ptip-tool footer { display: none; }
+.ptip-tool .workspace { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; overflow: hidden; border: 0; background-color: var(--workspace); background-image: linear-gradient(var(--workspace-grid) 1px, transparent 1px), linear-gradient(90deg, var(--workspace-grid) 1px, transparent 1px); background-size: 32px 32px; }
+.ptip-tool .upload-state { display: grid; place-items: center; min-height: inherit; padding: 40px 20px; }
+.ptip-tool .upload-card { display: grid; justify-items: center; gap: 14px; width: min(440px, 100%); padding: 34px; border: 1px dashed var(--ink); background: rgba(245, 241, 232, .72); text-align: center; cursor: pointer; transition: background .2s, transform .2s; }
+.ptip-tool .upload-card:hover, .ptip-tool .upload-card.is-dragging { background: #dcebef; transform: translateY(-3px); }
+.ptip-tool .upload-card:focus-within { outline: 2px solid var(--accent); outline-offset: 4px; }
+.ptip-tool .upload-icon { display: grid; place-items: center; width: 104px; height: 104px; border: 1px solid var(--ink); border-radius: 50%; color: var(--ink); }
+.ptip-tool .upload-icon svg { width: 54px; height: 54px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.25; }
+.ptip-tool .upload-card h2 { font-size: clamp(30px, 5vw, 48px); }
+.ptip-tool .upload-card p { max-width: 310px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.ptip-tool .upload-card input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.ptip-tool .canvas-state { position: absolute; inset: 0; }
+.ptip-tool .canvas-state.hidden, .ptip-tool .upload-state.hidden { display: none; }
+.ptip-tool .image-stage { position: absolute; inset: 0; transform-origin: 0 0; touch-action: none; }
+.ptip-tool #photo { display: block; width: 100%; height: 100%; object-fit: contain; }
+.ptip-tool .image-stage.is-panning { cursor: grab; }
+.ptip-tool .image-stage.is-panning:active { cursor: grabbing; }
+.ptip-tool .workspace-toolbar { position: absolute; top: 16px; left: 16px; z-index: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 7px; max-width: calc(100% - 32px); padding: 7px; border: 1px solid var(--ink); background: rgba(245, 241, 232, .94); box-shadow: 5px 5px 0 rgba(23, 50, 46, .12); }
+.ptip-tool .workspace-toolbar button { min-width: 78px; min-height: 58px; border: 1px solid var(--ink); border-radius: 0; background: var(--tool-blue); color: var(--ink); font-family: inherit; }
+.ptip-tool .workspace-toolbar button:hover, .ptip-tool .workspace-toolbar button.active { background: var(--ink); color: var(--paper); }
+.ptip-tool .workspace-toolbar button:active { cursor: grabbing; }
+.ptip-tool .toolbar-icon { display: block; font: 24px/1 Georgia, serif; }
+.ptip-tool .toolbar-label { display: block; margin-top: 5px; font: 500 10px/1.1 'DM Mono', monospace; text-transform: uppercase; }
+.ptip-tool .workspace-toolbar .separator { height: 38px; background: var(--line); }
+.ptip-tool .workspace-toolbar .status { min-width: 180px; padding: 0 7px; color: var(--muted); font: 500 11px/1.35 'DM Mono', monospace; text-transform: uppercase; }
+.ptip-tool .workspace-toolbar button:disabled { cursor: not-allowed; opacity: .45; }
+.ptip-tool .post-confirm { display: none; }
+.ptip-tool .confirmed .setup-tool { display: none; }
+.ptip-tool .confirmed .post-confirm { display: inline-flex; }
+.ptip-tool #vectorLayer { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; touch-action: none; }
+.ptip-tool .vector-line { stroke: var(--tool-red); stroke-width: 3; fill: none; marker-end: url(#vectorArrow); cursor: grab; }
+.ptip-tool .vector-line:active { cursor: grabbing; }
+.ptip-tool .vector-chord-hit { stroke: transparent; stroke-width: 24; fill: none; pointer-events: all; cursor: grab; }
+.ptip-tool .vector-chord-hit:active { cursor: grabbing; }
+.ptip-tool .vector-handle { fill: var(--paper); stroke: var(--tool-red); stroke-width: 3; cursor: grab; pointer-events: none; }
+.ptip-tool .vector-handle:active { cursor: grabbing; }
+.ptip-tool .vector-hit { fill: transparent; stroke: transparent; stroke-width: 0; cursor: grab; pointer-events: all; }
+.ptip-tool .vector-hit:active { cursor: grabbing; }
+.ptip-tool .tip-line { stroke: var(--tool-red); stroke-width: 2; stroke-dasharray: 5 5; vector-effect: non-scaling-stroke; }
+.ptip-tool .tip-dot { fill: var(--tool-red); stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
+.ptip-tool .tip-hit { fill: transparent; stroke: transparent; cursor: grab; }
+.ptip-tool .tip-hit:active { cursor: grabbing; }
+.ptip-tool .confirmed .vector-hit, .ptip-tool .confirmed .vector-chord-hit { display: none; }
+.ptip-tool .ratio-panel { position: absolute; bottom: 16px; left: 16px; z-index: 3; display: none; width: min(310px, calc(100% - 32px)); max-height: 240px; overflow: auto; padding: 12px; border: 1px solid var(--ink); background: rgba(245, 241, 232, .95); box-shadow: 5px 5px 0 rgba(23, 50, 46, .12); }
+.ptip-tool .confirmed .ratio-panel { display: block; }
+.ptip-tool .ratio-panel h3 { margin: 0 0 5px; font: 800 18px Georgia, serif; }
+.ptip-tool .ratio-panel p { margin: 0 0 9px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.ptip-tool .ratio-controls { display: flex; gap: 5px; margin-bottom: 8px; }
+.ptip-tool .ratio-controls button { padding: 5px 7px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font: 500 10px 'DM Mono', monospace; text-transform: uppercase; }
+.ptip-tool .ratio-controls button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.ptip-tool .ratio-row { display: grid; grid-template-columns: 25px 1fr 58px; gap: 7px; align-items: baseline; padding: 6px 0 6px 8px; border-top: 1px solid var(--line); border-left: 4px solid var(--match-color, var(--line)); font-size: 12px; }
+.ptip-tool .ratio-row strong { color: var(--tool-red); font: 500 10px 'DM Mono', monospace; }
+.ptip-tool .ratio-row span:last-child { color: var(--muted); font: 500 10px 'DM Mono', monospace; text-align: right; }
+.ptip-tool .helper { position: absolute; right: 16px; bottom: 14px; max-width: 280px; padding: 10px 12px; border-left: 3px solid var(--tool-red); background: rgba(245, 241, 232, .9); color: var(--muted); font-size: 12px; line-height: 1.4; }
+.ptip-tool #backToVector { order: -1; background: #ffd23f; color: var(--ink); border-color: var(--ink); box-shadow: 4px 4px 0 var(--ink); }
+.ptip-tool #backToReference { position: absolute; top: 16px; right: 16px; z-index: 4; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--ink); border-radius: 0; background: rgba(245, 241, 232, .94); color: var(--tool-red); font-family: inherit; box-shadow: 5px 5px 0 rgba(23, 50, 46, .12); }
+.ptip-tool #backToReference .toolbar-icon { font: 28px/1 Georgia, serif; color: var(--tool-red); }
+.ptip-tool #backToReference:hover { background: var(--tool-red); color: var(--paper); }
+.ptip-tool #backToReference:hover .toolbar-icon { color: var(--paper); }
+@media (max-width: 640px) {
+    .ptip-tool .workspace-toolbar { top: 10px; left: 10px; right: 58px; }
+    .ptip-tool .workspace-toolbar .status { min-width: 0; flex: 1; }
+    .ptip-tool .workspace-toolbar button { min-width: 70px; touch-action: none; }
+    .ptip-tool .workspace-toolbar .zoom-control { display: none; }
+    .ptip-tool .helper { right: 10px; bottom: 10px; max-width: calc(100% - 20px); }
+    .ptip-tool .confirmed .helper { top: 84px; right: 10px; bottom: auto; left: 10px; max-width: none; }
+    .ptip-tool .confirmed .ratio-panel { bottom: 10px; max-height: 34dvh; }
+    .ptip-tool #backToReference { top: 10px; right: 10px; width: 40px; height: 40px; }
+}

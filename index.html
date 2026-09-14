@@ -7,6 +7,7 @@
     <title>empID | Empidonax helper tool</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/ptip.css">
 </head>
 <body>
     <main class="shell">
@@ -46,12 +47,12 @@
                 <span class="action-title">Glossary</span>
                 <span class="action-description">Review field mark definitions</span>
             </button>
-            <a class="action-card action-link" href="ptip.html" target="_blank" rel="noopener noreferrer" aria-label="Open Primary Tip Tool in a new tab">
+            <button class="action-card" type="button" id="open-ptip" aria-label="Open Primary Tip Tool">
                 <span class="action-number">04</span>
                 <span class="action-icon" aria-hidden="true">&#x2197;&#xFE0E;</span>
                 <span class="action-title">Primary Tip Tool</span>
                 <span class="action-description">Measure feather tips in a photo</span>
-            </a>
+            </button>
         </nav>
 
         <section id="reference-view" class="view-panel" data-panel="reference" aria-labelledby="reference-title">
@@ -119,6 +120,90 @@
             <span id="data-source"></span>
         </footer>
     </main>
+
+    <div class="ptip-tool" id="ptipTool">
+        <main class="tool-shell">
+            <section class="workspace" id="workspace" aria-label="Primary tip measurement workspace">
+                <button id="backToReference" type="button" title="Back to reference" aria-label="Back to reference">
+                    <span class="toolbar-icon" aria-hidden="true">&times;</span>
+                </button>
+                <div class="upload-state" id="uploadState">
+                    <label class="upload-card" id="uploadCard" for="imageInput">
+                        <span class="upload-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M5 20h14"></path></svg>
+                        </span>
+                        <span class="kicker">Start with a photograph</span>
+                        <h2>Drop an image</h2>
+                        <p>Choose a wing photograph from your device. The image stays in this browser tab and is never uploaded.</p>
+                        <input id="imageInput" type="file" accept="image/*">
+                    </label>
+                </div>
+
+                <div class="canvas-state hidden" id="canvasState">
+                    <div class="image-stage" id="imageStage">
+                        <img id="photo" alt="Uploaded wing photograph">
+                    </div>
+                    <svg id="vectorLayer" aria-label="Placed primary vector">
+                        <defs>
+                            <marker id="vectorArrow" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse" viewBox="0 0 12 10" preserveAspectRatio="xMidYMid meet">
+                                <path d="M0,0 L12,5 L0,10 Z" fill="var(--tool-red)"></path>
+                            </marker>
+                        </defs>
+                    </svg>
+                    <div class="workspace-toolbar" id="toolbar" aria-label="Image tools">
+                        <button id="createVector" class="setup-tool" type="button" draggable="true" aria-pressed="false" title="Create a vector">
+                            <span class="toolbar-icon" aria-hidden="true">↗</span><span class="toolbar-label">Create vector</span>
+                        </button>
+                        <button id="panImage" class="setup-tool hidden" type="button" aria-pressed="false" title="Pan the image">
+                            <span class="toolbar-icon" aria-hidden="true">✥</span><span class="toolbar-label">Pan</span>
+                        </button>
+                        <button id="confirmVector" class="setup-tool" type="button" title="Confirm vector">
+                            <span class="toolbar-icon" aria-hidden="true">✓</span><span class="toolbar-label">Confirm vector</span>
+                        </button>
+                        <button id="resetVector" class="setup-tool hidden" type="button" title="Remove the vector and start over">
+                            <span class="toolbar-icon" aria-hidden="true">×</span><span class="toolbar-label">Reset vector</span>
+                        </button>
+                        <button id="reuploadImage" class="setup-tool" type="button" title="Replace the current image">
+                            <span class="toolbar-icon" aria-hidden="true">↻</span><span class="toolbar-label">Reupload</span>
+                        </button>
+                        <button id="zoomOut" class="zoom-control setup-tool" type="button" title="Zoom out">
+                            <span class="toolbar-icon" aria-hidden="true">−</span><span class="toolbar-label">Zoom out</span>
+                        </button>
+                        <span class="zoom-label zoom-control setup-tool" id="zoomLabel">100%</span>
+                        <button id="zoomIn" class="zoom-control setup-tool" type="button" title="Zoom in">
+                            <span class="toolbar-icon" aria-hidden="true">+</span><span class="toolbar-label">Zoom in</span>
+                        </button>
+                        <button id="resetTips" class="post-confirm" type="button" title="Delete all plotted feather tips">
+                            <span class="toolbar-icon" aria-hidden="true">×</span><span class="toolbar-label">Reset tips</span>
+                        </button>
+                        <button id="backToVector" class="post-confirm" type="button" title="Back to vector setup" aria-label="Back to vector setup">
+                            <span class="toolbar-icon" aria-hidden="true">←</span><span class="toolbar-label">Back to vector</span>
+                        </button>
+                        <div class="separator" aria-hidden="true"></div>
+                        <span class="status" id="toolStatus" aria-live="polite">Ready to place a vector.</span>
+                    </div>
+                    <p class="helper" id="helperText">Choose Create vector, then click or tap once on the wing to place a horizontal vector.</p>
+                    <section class="ratio-panel" id="ratioPanel" aria-live="polite">
+                        <h3>Likely primary ratios</h3>
+                        <div class="ratio-controls" role="group" aria-label="Filter reference species by region">
+                            <button id="ptipRegionAll" type="button" aria-pressed="true">All of NA</button>
+                            <button id="ptipRegionWest" type="button" aria-pressed="false">West Coast</button>
+                            <button id="ptipRegionEast" type="button" aria-pressed="false">East Coast</button>
+                        </div>
+                        <p id="ratioSummary">Place at least five feather tips to compare p7-p6, p6-p5, and p5-p4.</p>
+                        <div class="ratio-controls" role="group" aria-label="Furthest primary ranking">
+                            <button id="rankAuto" type="button" aria-pressed="true">Auto</button>
+                            <button id="rankP8" type="button" aria-pressed="false">Force P8 last</button>
+                            <button id="rankP7" type="button" aria-pressed="false">Force P7 last</button>
+                        </div>
+                        <div id="ratioResults"></div>
+                    </section>
+                </div>
+            </section>
+        </main>
+    </div>
+
     <script src="js/index.js"></script>
+    <script src="js/ptip.js"></script>
 </body>
 </html>
