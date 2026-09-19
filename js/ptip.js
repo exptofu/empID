@@ -78,6 +78,7 @@
     const TIP_DOT_STROKE = 2;
     const TIP_HIT_RADIUS = 22;
     const TIP_LINE_WIDTH = 2;
+    const EXPECTED_TICK_HALF_LENGTH = 300;
     const ARROW_MARKER_WIDTH = 12;
     const ARROW_MARKER_HEIGHT = 10;
     const LABEL_FONT_SIZE = 11;
@@ -94,6 +95,8 @@
     let rawSpeciesData = null;
     let ratioProfiles = [];
     let rankingMode = "auto";
+    // The ratio-result row the user clicked, if any: { name, caseLabel }. Drives the expected-ratio overlay lines.
+    let selectedRatio = null;
 
     function openTool() {
         ptipTool.classList.add("open");
@@ -266,6 +269,7 @@
         if (!vector || markers.length < 5 || !ratioProfiles.length) {
             ratioSummary.textContent = `${markers.length}/5 tips placed. Add ${Math.max(0, 5 - markers.length)} more to rank p7-p6, p6-p5, and p5-p4.`;
             ratioResults.innerHTML = "";
+            renderExpectedLines();
             return;
         }
         const cases = rankingMode === "p8"
@@ -279,6 +283,7 @@
         if (cases.some(testCase => !testCase.signature)) {
             ratioSummary.textContent = `Not enough tips for ${rankingMode === "p8" ? "P8" : "P7"} ranking.`;
             ratioResults.innerHTML = "";
+            renderExpectedLines();
             return;
         }
         const ranked = ratioProfiles.flatMap(profile => cases.map(testCase => {
@@ -288,15 +293,99 @@
         })).sort((a, b) => a.difference - b.difference).slice(0, 6);
         const rankingLabel = rankingMode === "auto" ? "both possible furthest-primary assignments" : `${rankingMode.toUpperCase()} furthest assignment`;
         ratioSummary.textContent = ranked.length
-            ? `${markers.length} tips placed. Ranking uses ${rankingLabel}.`
+            ? `${markers.length} tips placed. Ranking uses ${rankingLabel}. Click a row to overlay its expected primary spacing.`
             : "No reference species match the current species-pair filter.";
         ratioResults.innerHTML = ranked.map((result, index) => {
             const color = differenceColor(result.difference);
             const expectation = RATIO_EXPECTATION[result.name];
             const ratioMatches = expectation === "below" ? result.ratio < 1 : expectation === "above" ? result.ratio > 1 : null;
             const ratioColor = ratioMatches === null ? "var(--muted)" : ratioMatches ? "hsl(140, 70%, 38%)" : "hsl(0, 70%, 45%)";
-            return `<div class="ratio-row" style="--match-color:${color}"><strong>${String(index + 1).padStart(2, "0")}</strong><span>${result.name} / ${result.caseLabel}</span><span style="color:${color}">${result.difference.toFixed(3)} diff</span><span style="color:${ratioColor}">P6:7 ${result.ratio.toFixed(2)}</span></div>`;
+            const isSelected = Boolean(selectedRatio) && selectedRatio.name === result.name && selectedRatio.caseLabel === result.caseLabel;
+            return `<div class="ratio-row${isSelected ? " selected" : ""}" style="--match-color:${color}" data-name="${escapeAttribute(result.name)}" data-case="${escapeAttribute(result.caseLabel)}" role="button" tabindex="0" aria-pressed="${isSelected}"><strong>${String(index + 1).padStart(2, "0")}</strong><span>${result.name} / ${result.caseLabel}</span><span style="color:${color}">${result.difference.toFixed(3)} diff</span><span style="color:${ratioColor}">P6:7 ${result.ratio.toFixed(2)}</span></div>`;
         }).join("");
+        renderExpectedLines();
+    }
+
+    function escapeAttribute(value) {
+        return String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    }
+
+    // Toggles the expected-ratio overlay for a clicked ratio-result row (click again to deselect).
+    function toggleSelectedRatio(name, caseLabel) {
+        selectedRatio = selectedRatio && selectedRatio.name === name && selectedRatio.caseLabel === caseLabel
+            ? null
+            : { name, caseLabel };
+        renderRatioResults();
+    }
+
+    function clearExpectedLines() {
+        vectorLayer.querySelectorAll(".expected-tip-line").forEach(line => line.remove());
+    }
+
+    // Anchors the selected species' normalized primary lengths to the actual furthest-tip and P5 positions, then
+    // linearly maps (interpolates/extrapolates) the remaining primaries onto the vector so their expected spacing
+    // can be compared against where the tips were actually placed.
+    function computeExpectedPositions(vector, markers, useP8, values) {
+        const startX = Number(vector.dataset.startX);
+        const startY = Number(vector.dataset.startY);
+        const endX = Number(vector.dataset.endX);
+        const endY = Number(vector.dataset.endY);
+        const length = Math.hypot(endX - startX, endY - startY) || 1;
+        const direction = { x: (endX - startX) / length, y: (endY - startY) / length };
+        const ordered = markers.map(marker => {
+            const x = Number(marker.dataset.x);
+            const y = Number(marker.dataset.y);
+            return { x, y, axis: (x - startX) * direction.x + (y - startY) * direction.y };
+        }).sort((a, b) => b.axis - a.axis);
+        const primaries = useP8 ? ["P8", "P7", "P6", "P5", "P4"] : ["P7", "P6", "P5", "P4"];
+        if (ordered.length < primaries.length) return null;
+        const anchorFurthest = ordered[0];
+        const anchorP5 = ordered[primaries.indexOf("P5")];
+        const valueFurthest = values[primaries[0]];
+        const valueP5 = values.P5;
+        if (typeof valueFurthest !== "number" || typeof valueP5 !== "number" || valueFurthest === valueP5) return null;
+        return primaries.map(key => {
+            const value = values[key];
+            if (typeof value !== "number") return null;
+            const t = (value - valueFurthest) / (valueP5 - valueFurthest);
+            const axis = anchorFurthest.axis + t * (anchorP5.axis - anchorFurthest.axis);
+            return { key, point: { x: startX + direction.x * axis, y: startY + direction.y * axis } };
+        }).filter(Boolean);
+    }
+
+    // Draws solid, semi-transparent perpendicular ticks at the selected species' expected primary-tip positions.
+    function renderExpectedLines() {
+        clearExpectedLines();
+        if (!selectedRatio || !confirmed) return;
+        const vector = vectorLayer.querySelector(".vector");
+        const markers = [...vectorLayer.querySelectorAll(".tip-marker")];
+        if (!vector) return;
+        const useP8 = selectedRatio.caseLabel === "P8 furthest";
+        const profile = ratioProfiles.find(item => item.name === selectedRatio.name);
+        if (!profile || !profile.values) return;
+        const expected = computeExpectedPositions(vector, markers, useP8, profile.values);
+        if (!expected) return;
+        const startX = Number(vector.dataset.startX);
+        const startY = Number(vector.dataset.startY);
+        const endX = Number(vector.dataset.endX);
+        const endY = Number(vector.dataset.endY);
+        const length = Math.hypot(endX - startX, endY - startY) || 1;
+        const direction = { x: (endX - startX) / length, y: (endY - startY) / length };
+        const perpendicular = { x: direction.y, y: -direction.x };
+        const scale = overlayScale();
+        const half = EXPECTED_TICK_HALF_LENGTH / scale;
+        expected.forEach(({ key, point }) => {
+            const line = svgElement("line", {
+                class: "expected-tip-line",
+                "data-primary": key,
+                x1: point.x - perpendicular.x * half,
+                y1: point.y - perpendicular.y * half,
+                x2: point.x + perpendicular.x * half,
+                y2: point.y + perpendicular.y * half
+            });
+            line.style.strokeWidth = `${TIP_LINE_WIDTH / scale}px`;
+            vectorLayer.append(line);
+        });
     }
 
     // Rebuilds the ranked profile list from the last-fetched data, restricted to the selected species pair/trio.
@@ -307,12 +396,14 @@
             if (!values || ["P7", "P6", "P5", "P4"].some(key => typeof values[key] !== "number")) return [];
             return [{
                 name: bird.name,
+                values,
                 signature: [values.P7 - values.P6, values.P6 - values.P5, values.P5 - values.P4]
             }];
         }).map(profile => {
             const total = profile.signature.reduce((sum, value) => sum + value, 0);
             return { ...profile, signature: profile.signature.map(value => value / total) };
         });
+        selectedRatio = null;
         renderRatioResults();
     }
 
@@ -383,10 +474,12 @@
     function resetWorkspace() {
         vectorLayer.querySelector(".vector")?.remove();
         vectorLayer.querySelectorAll(".tip-marker").forEach(marker => marker.remove());
+        clearExpectedLines();
         confirmed = false;
         canvasState.classList.remove("confirmed");
         tipPlacementActive = false;
         placementActive = false;
+        selectedRatio = null;
         activeHandle = null;
         activeDragOffset = { x: 0, y: 0 };
         dragStartPoint = null;
@@ -416,6 +509,8 @@
         if (!file || !file.type.startsWith("image/")) return;
         vectorLayer.querySelector(".vector")?.remove();
         vectorLayer.querySelectorAll(".tip-marker").forEach(marker => marker.remove());
+        clearExpectedLines();
+        selectedRatio = null;
         confirmed = false;
         canvasState.classList.remove("confirmed");
         tipPlacementActive = false;
@@ -569,6 +664,7 @@
         vectorLayer.querySelectorAll(".tip-marker").forEach(marker => marker.remove());
         tipPlacementActive = false;
         activeTip = null;
+        selectedRatio = null;
         updateToolState("Tips reset. Add feather tips.");
         helperText.textContent = "Click or press to place a feather tip, and drag to align the dotted line against a primary tip. Start from outside and work inwards.";
         renderTips();
@@ -576,6 +672,7 @@
 
     function setRankingMode(mode) {
         rankingMode = mode;
+        selectedRatio = null;
         Object.entries(rankButtons).forEach(([name, button]) => button.setAttribute("aria-pressed", String(name === mode)));
         renderRatioResults();
     }
@@ -621,6 +718,8 @@
         confirmed = false;
         canvasState.classList.remove("confirmed");
         vectorLayer.querySelectorAll(".tip-marker").forEach(marker => marker.remove());
+        selectedRatio = null;
+        clearExpectedLines();
         vector.dataset.startX = vector.dataset.setupStartX;
         vector.dataset.startY = vector.dataset.setupStartY;
         vector.dataset.endX = vector.dataset.setupEndX;
@@ -709,6 +808,18 @@
     resetVector.addEventListener("click", beginPlacement);
     Object.entries(rankButtons).forEach(([mode, button]) => button.addEventListener("click", () => setRankingMode(mode)));
     Object.entries(speciesGroups).forEach(([group, { button }]) => button.addEventListener("click", () => setSpeciesGroup(group)));
+    ratioResults.addEventListener("click", event => {
+        const row = event.target.closest(".ratio-row");
+        if (!row) return;
+        toggleSelectedRatio(row.dataset.name, row.dataset.case);
+    });
+    ratioResults.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        const row = event.target.closest(".ratio-row");
+        if (!row) return;
+        event.preventDefault();
+        toggleSelectedRatio(row.dataset.name, row.dataset.case);
+    });
     vectorLayer.addEventListener("pointerdown", handleCanvasPointer);
     workspace.addEventListener("dragover", event => event.preventDefault());
     workspace.addEventListener("drop", event => {
