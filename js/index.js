@@ -211,8 +211,6 @@ function setActiveRegion(region) {
     });
     renderReference(speciesFilter.value, traitFilter.value);
     updateResults();
-    window.ptipTool?.refreshRatioProfiles?.();
-    window.ptipTool?.onRegionChange?.(region);
 }
 
 function setDarkMode(enabled) {

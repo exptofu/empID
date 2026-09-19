@@ -32,11 +32,11 @@
         p8: document.querySelector("#rankP8"),
         p7: document.querySelector("#rankP7")
     };
-    const regionButtons = {
-        all: document.querySelector("#ptipRegionAll"),
-        west: document.querySelector("#ptipRegionWest"),
-        east: document.querySelector("#ptipRegionEast")
+    const speciesGroups = {
+        acadianYB: { button: document.querySelector("#ptipGroupAcadianYB"), species: ["Acadian Flycatcher", "Yellow-bellied Flycatcher"] },
+        traill: { button: document.querySelector("#ptipGroupTraill"), species: ["Least Flycatcher", "Alder Flycatcher", "Willow Flycatcher"] }
     };
+    let activeSpeciesGroup = "acadianYB";
     let imageUrl = null;
     let placementActive = false;
     let dragPointerId = null;
@@ -68,6 +68,29 @@
     let stageHeight = 0;
     let tipPlacementActive = false;
     let activeTip = null;
+    // Base (100%-zoom) sizes for overlay chrome; all are divided by overlayScale() so they shrink as the photo is zoomed in.
+    const VECTOR_LINE_WIDTH = 3;
+    const VECTOR_CHORD_HIT_WIDTH = 24;
+    const VECTOR_HANDLE_RADIUS = 7;
+    const VECTOR_HANDLE_STROKE = 3;
+    const VECTOR_HIT_RADIUS = 18;
+    const TIP_DOT_RADIUS = 7;
+    const TIP_DOT_STROKE = 2;
+    const TIP_HIT_RADIUS = 22;
+    const TIP_LINE_WIDTH = 2;
+    const ARROW_MARKER_WIDTH = 12;
+    const ARROW_MARKER_HEIGHT = 10;
+    const LABEL_FONT_SIZE = 11;
+    const LABEL_OFFSET_PERP = 30;
+    const LABEL_OFFSET_ALONG = 26;
+    const LABEL_PAD_X = 6;
+    const LABEL_PAD_Y = 4;
+    const LABEL_BORDER_WIDTH = 1.5;
+
+    // The current photo zoom factor: setup uses viewScale, confirmed mode locks to confirmFitScale.
+    function overlayScale() {
+        return confirmed ? confirmFitScale : viewScale;
+    }
     let rawSpeciesData = null;
     let ratioProfiles = [];
     let rankingMode = "auto";
@@ -100,18 +123,64 @@
             line.setAttribute("x2", end.x);
             line.setAttribute("y2", end.y);
         });
-        vector.querySelectorAll('[data-handle="start"]').forEach(handle => {
+        const scale = overlayScale();
+        vector.querySelectorAll(".vector-line").forEach(line => { line.style.strokeWidth = `${VECTOR_LINE_WIDTH / scale}px`; });
+        vector.querySelectorAll(".vector-chord-hit").forEach(line => { line.style.strokeWidth = `${VECTOR_CHORD_HIT_WIDTH / scale}px`; });
+        vector.querySelectorAll('circle[data-handle="start"]').forEach(handle => {
             handle.setAttribute("cx", start.x);
             handle.setAttribute("cy", start.y);
+            handle.setAttribute("r", VECTOR_HIT_RADIUS / scale);
         });
-        vector.querySelectorAll('[data-handle="end"]').forEach(handle => {
+        vector.querySelectorAll('circle[data-handle="end"]').forEach(handle => {
             handle.setAttribute("cx", end.x);
             handle.setAttribute("cy", end.y);
+            handle.setAttribute("r", VECTOR_HIT_RADIUS / scale);
         });
         vector.querySelectorAll(".vector-anchor").forEach(handle => {
             handle.setAttribute("cx", start.x);
             handle.setAttribute("cy", start.y);
+            handle.setAttribute("r", VECTOR_HANDLE_RADIUS / scale);
+            handle.style.strokeWidth = `${VECTOR_HANDLE_STROKE / scale}px`;
         });
+        const length = Math.hypot(end.x - start.x, end.y - start.y) || 1;
+        const direction = { x: (end.x - start.x) / length, y: (end.y - start.y) / length };
+        positionVectorLabel(vector, "start", start, direction);
+        positionVectorLabel(vector, "end", end, direction);
+    }
+
+    // Moves a draggable label (which shares the same data-handle as its endpoint) to sit beside that endpoint, and sizes its background box to fit the text.
+    function positionVectorLabel(vector, handle, point, direction) {
+        const label = vector.querySelector(`.vector-label[data-handle="${handle}"]`);
+        if (!label) return;
+        const scale = overlayScale();
+        const perpendicular = { x: direction.y, y: -direction.x };
+        const along = handle === "start" ? -1 : 1;
+        const offsetPerp = LABEL_OFFSET_PERP / scale;
+        const offsetAlong = LABEL_OFFSET_ALONG / scale;
+        const labelX = point.x + perpendicular.x * offsetPerp + direction.x * along * offsetAlong;
+        const labelY = point.y + perpendicular.y * offsetPerp + direction.y * along * offsetAlong;
+        label.setAttribute("transform", `translate(${labelX}, ${labelY})`);
+        const text = label.querySelector(".vector-label-text");
+        const box = label.querySelector(".vector-label-bg");
+        text.style.fontSize = `${LABEL_FONT_SIZE / scale}px`;
+        box.style.strokeWidth = `${LABEL_BORDER_WIDTH / scale}px`;
+        const bbox = text.getBBox();
+        const paddingX = LABEL_PAD_X / scale;
+        const paddingY = LABEL_PAD_Y / scale;
+        box.setAttribute("x", bbox.x - paddingX);
+        box.setAttribute("y", bbox.y - paddingY);
+        box.setAttribute("width", bbox.width + paddingX * 2);
+        box.setAttribute("height", bbox.height + paddingY * 2);
+    }
+
+    // Builds a small draggable text box that mirrors its endpoint's data-handle, so grabbing the label drags the same point as the circle/arrow.
+    function makeVectorLabel(handle, text) {
+        const label = svgElement("g", { class: "vector-label", "data-handle": handle });
+        label.append(svgElement("rect", { class: "vector-label-bg" }));
+        const textElement = svgElement("text", { class: "vector-label-text" });
+        textElement.textContent = text;
+        label.append(textElement);
+        return label;
     }
 
     function renderTips() {
@@ -120,6 +189,7 @@
         const end = vector ? { x: Number(vector.dataset.endX), y: Number(vector.dataset.endY) } : null;
         const length = start && end ? Math.hypot(end.x - start.x, end.y - start.y) || 1 : 1;
         const direction = start && end ? { x: (end.x - start.x) / length, y: (end.y - start.y) / length } : null;
+        const scale = overlayScale();
         vectorLayer.querySelectorAll(".tip-marker").forEach(marker => {
             const x = Number(marker.dataset.x);
             const y = Number(marker.dataset.y);
@@ -137,21 +207,29 @@
             marker.querySelector(".tip-line").setAttribute("y1", y);
             marker.querySelector(".tip-line").setAttribute("x2", mirrorX);
             marker.querySelector(".tip-line").setAttribute("y2", mirrorY);
+            marker.querySelector(".tip-line").style.strokeWidth = `${TIP_LINE_WIDTH / scale}px`;
             marker.querySelector(".tip-dot").setAttribute("cx", x);
             marker.querySelector(".tip-dot").setAttribute("cy", y);
+            marker.querySelector(".tip-dot").setAttribute("r", TIP_DOT_RADIUS / scale);
+            marker.querySelector(".tip-dot").style.strokeWidth = `${TIP_DOT_STROKE / scale}px`;
             marker.querySelector(".tip-hit").setAttribute("cx", x);
             marker.querySelector(".tip-hit").setAttribute("cy", y);
+            marker.querySelector(".tip-hit").setAttribute("r", TIP_HIT_RADIUS / scale);
         });
         renderRatioResults();
     }
 
     function measuredSignature(vector, markers, useP8) {
         const startX = Number(vector.dataset.startX);
+        const startY = Number(vector.dataset.startY);
         const endX = Number(vector.dataset.endX);
-        const direction = endX >= startX ? 1 : -1;
+        const endY = Number(vector.dataset.endY);
+        const length = Math.hypot(endX - startX, endY - startY) || 1;
+        const direction = { x: (endX - startX) / length, y: (endY - startY) / length };
+        // Project each tip onto the vector's own direction so perpendicular distance from the vector never affects the ranking.
         const ordered = markers.map(marker => ({
             marker,
-            axis: (Number(marker.dataset.x) - startX) * direction
+            axis: (Number(marker.dataset.x) - startX) * direction.x + (Number(marker.dataset.y) - startY) * direction.y
         })).sort((a, b) => b.axis - a.axis);
         const needed = useP8 ? 5 : 4;
         if (ordered.length < needed) return null;
@@ -171,6 +249,15 @@
         const hue = 140 - (clamped / 0.4) * 140;
         return `hsl(${hue}, 70%, 38%)`;
     }
+
+    // Whether each species' P6:7 ratio (P6-P5 / P7-P6) should read below or above 1.
+    const RATIO_EXPECTATION = {
+        "Acadian Flycatcher": "below",
+        "Yellow-bellied Flycatcher": "above",
+        "Alder Flycatcher": "below",
+        "Willow Flycatcher": "above",
+        "Least Flycatcher": "above"
+    };
 
     function renderRatioResults() {
         if (!confirmed) return;
@@ -196,22 +283,26 @@
         }
         const ranked = ratioProfiles.flatMap(profile => cases.map(testCase => {
             const difference = testCase.signature.reduce((sum, value, index) => sum + Math.abs(value - profile.signature[index]), 0);
-            return { ...profile, caseLabel: testCase.label, difference };
+            const ratio = testCase.signature[1] / testCase.signature[0];
+            return { ...profile, caseLabel: testCase.label, difference, ratio };
         })).sort((a, b) => a.difference - b.difference).slice(0, 6);
         const rankingLabel = rankingMode === "auto" ? "both possible furthest-primary assignments" : `${rankingMode.toUpperCase()} furthest assignment`;
         ratioSummary.textContent = ranked.length
             ? `${markers.length} tips placed. Ranking uses ${rankingLabel}.`
-            : "No reference species match the current region filter.";
+            : "No reference species match the current species-pair filter.";
         ratioResults.innerHTML = ranked.map((result, index) => {
             const color = differenceColor(result.difference);
-            return `<div class="ratio-row" style="--match-color:${color}"><strong>${String(index + 1).padStart(2, "0")}</strong><span>${result.name} / ${result.caseLabel}</span><span style="color:${color}">${result.difference.toFixed(3)} diff</span></div>`;
+            const expectation = RATIO_EXPECTATION[result.name];
+            const ratioMatches = expectation === "below" ? result.ratio < 1 : expectation === "above" ? result.ratio > 1 : null;
+            const ratioColor = ratioMatches === null ? "var(--muted)" : ratioMatches ? "hsl(140, 70%, 38%)" : "hsl(0, 70%, 45%)";
+            return `<div class="ratio-row" style="--match-color:${color}"><strong>${String(index + 1).padStart(2, "0")}</strong><span>${result.name} / ${result.caseLabel}</span><span style="color:${color}">${result.difference.toFixed(3)} diff</span><span style="color:${ratioColor}">P6:7 ${result.ratio.toFixed(2)}</span></div>`;
         }).join("");
     }
 
-    // Rebuilds the ranked profile list from the last-fetched data, honoring the page's active region filter.
+    // Rebuilds the ranked profile list from the last-fetched data, restricted to the selected species pair/trio.
     function buildRatioProfiles() {
-        const isInActiveRegion = window.empidRegionFilter?.isSpeciesInActiveRegion || (() => true);
-        ratioProfiles = (rawSpeciesData || []).filter(bird => isInActiveRegion(bird.name)).flatMap(bird => {
+        const activeSpecies = speciesGroups[activeSpeciesGroup].species;
+        ratioProfiles = (rawSpeciesData || []).filter(bird => activeSpecies.includes(bird.name)).flatMap(bird => {
             const values = bird["Length normalized to P8-P3"];
             if (!values || ["P7", "P6", "P5", "P4"].some(key => typeof values[key] !== "number")) return [];
             return [{
@@ -273,8 +364,10 @@
         }
         renderVectorOverlay();
         renderTips();
-        vectorArrow.setAttribute("markerWidth", 12);
-        vectorArrow.setAttribute("markerHeight", 10);
+        const scale = overlayScale();
+        vectorArrow.setAttribute("markerWidth", ARROW_MARKER_WIDTH / scale);
+        vectorArrow.setAttribute("markerHeight", ARROW_MARKER_HEIGHT / scale);
+        // refX/refY are in the marker's fixed viewBox space, not markerWidth/Height space, so they stay constant.
         vectorArrow.setAttribute("refX", 8);
         vectorArrow.setAttribute("refY", 5);
         zoomLabel.textContent = `${Math.round(viewScale * 100)}%`;
@@ -413,6 +506,8 @@
         group.append(svgElement("circle", { class: "vector-handle vector-anchor", cx: start.x, cy: start.y, r: 7 }));
         group.append(svgElement("circle", { class: "vector-hit", "data-handle": "start", cx: start.x, cy: start.y, r: 18 }));
         group.append(svgElement("circle", { class: "vector-hit", "data-handle": "end", cx: end.x, cy: end.y, r: 18 }));
+        group.append(makeVectorLabel("start", "Top of Wing"));
+        group.append(makeVectorLabel("end", "Primary Extension"));
         vectorLayer.append(group);
         renderView();
         return true;
@@ -475,7 +570,7 @@
         tipPlacementActive = false;
         activeTip = null;
         updateToolState("Tips reset. Add feather tips.");
-        helperText.textContent = "Add feather tip, then click or drag it onto a primary. Dotted lines mirror across the vector.";
+        helperText.textContent = "Click or press to place a feather tip, and drag to align the dotted line against a primary tip. Start from outside and work inwards.";
         renderTips();
     }
 
@@ -485,9 +580,10 @@
         renderRatioResults();
     }
 
-    // Reflects the page-wide region filter in this tool's own selector.
-    function syncRegionButtons(region) {
-        Object.entries(regionButtons).forEach(([name, button]) => button.setAttribute("aria-pressed", String(name === region)));
+    function setSpeciesGroup(group) {
+        activeSpeciesGroup = group;
+        Object.entries(speciesGroups).forEach(([name, { button }]) => button.setAttribute("aria-pressed", String(name === group)));
+        buildRatioProfiles();
     }
 
     function confirmCurrentVector() {
@@ -612,7 +708,7 @@
     resetTips.addEventListener("click", clearTips);
     resetVector.addEventListener("click", beginPlacement);
     Object.entries(rankButtons).forEach(([mode, button]) => button.addEventListener("click", () => setRankingMode(mode)));
-    Object.entries(regionButtons).forEach(([region, button]) => button.addEventListener("click", () => window.empidRegionFilter?.setActiveRegion?.(region)));
+    Object.entries(speciesGroups).forEach(([group, { button }]) => button.addEventListener("click", () => setSpeciesGroup(group)));
     vectorLayer.addEventListener("pointerdown", handleCanvasPointer);
     workspace.addEventListener("dragover", event => event.preventDefault());
     workspace.addEventListener("drop", event => {
@@ -792,8 +888,7 @@
         if (!canvasState.classList.contains("hidden")) renderView();
     }).observe(workspace);
 
-    window.ptipTool = { open: openTool, close: closeTool, refreshRatioProfiles: buildRatioProfiles, onRegionChange: syncRegionButtons };
+    window.ptipTool = { open: openTool, close: closeTool, refreshRatioProfiles: buildRatioProfiles };
 
-    syncRegionButtons(window.empidRegionFilter?.getActiveRegion?.() || "all");
     loadRatioProfiles();
 })();

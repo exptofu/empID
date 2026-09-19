@@ -69,6 +69,11 @@ body.ptip-open { overflow: hidden; }
 .ptip-tool .vector-handle:active { cursor: grabbing; }
 .ptip-tool .vector-hit { fill: transparent; stroke: transparent; stroke-width: 0; cursor: grab; pointer-events: all; }
 .ptip-tool .vector-hit:active { cursor: grabbing; }
+.ptip-tool .vector-label { cursor: grab; }
+.ptip-tool .vector-label:active { cursor: grabbing; }
+.ptip-tool .confirmed .vector-label { pointer-events: none; }
+.ptip-tool .vector-label-bg { fill: var(--tool-surface); stroke: var(--tool-red); stroke-width: 1.5; }
+.ptip-tool .vector-label-text { fill: var(--ink); font: 600 11px 'DM Mono', monospace; text-anchor: middle; dominant-baseline: central; }
 .ptip-tool .tip-line { stroke: var(--tool-red); stroke-width: 2; stroke-dasharray: 5 5; vector-effect: non-scaling-stroke; }
 .ptip-tool .tip-dot { fill: var(--tool-red); stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
 .ptip-tool .tip-hit { fill: transparent; stroke: transparent; cursor: grab; }
@@ -81,9 +86,9 @@ body.ptip-open { overflow: hidden; }
 .ptip-tool .ratio-controls { display: flex; gap: 5px; margin-bottom: 8px; }
 .ptip-tool .ratio-controls button { padding: 5px 7px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font: 500 10px 'DM Mono', monospace; text-transform: uppercase; }
 .ptip-tool .ratio-controls button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-.ptip-tool .ratio-row { display: grid; grid-template-columns: 25px 1fr 58px; gap: 7px; align-items: baseline; padding: 6px 0 6px 8px; border-top: 1px solid var(--line); border-left: 4px solid var(--match-color, var(--line)); font-size: 12px; }
+.ptip-tool .ratio-row { display: grid; grid-template-columns: 25px 1fr 58px 62px; gap: 7px; align-items: baseline; padding: 6px 0 6px 8px; border-top: 1px solid var(--line); border-left: 4px solid var(--match-color, var(--line)); font-size: 12px; }
 .ptip-tool .ratio-row strong { font: 500 10px 'DM Mono', monospace; }
-.ptip-tool .ratio-row span:last-child { color: var(--muted); font: 500 10px 'DM Mono', monospace; text-align: right; }
+.ptip-tool .ratio-row span:nth-child(3), .ptip-tool .ratio-row span:nth-child(4) { color: var(--muted); font: 500 10px 'DM Mono', monospace; text-align: right; }
 .ptip-tool .helper { position: absolute; right: 16px; bottom: 14px; max-width: 280px; padding: 10px 12px; border-left: 3px solid var(--tool-red); background: var(--tool-helper); color: var(--muted); font-size: 15px; line-height: 1.4; }
 .ptip-tool #backToVector { order: -1; background: var(--tool-action); color: var(--tool-action-text); border-color: var(--ink); box-shadow: 4px 4px 0 var(--ink); }
 .ptip-tool #backToReference { position: absolute; top: 16px; right: 16px; z-index: 4; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--ink); border-radius: 0; background: var(--tool-surface); color: var(--tool-red); font-family: inherit; box-shadow: 5px 5px 0 var(--tool-shadow); }
